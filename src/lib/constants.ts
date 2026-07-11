@@ -67,6 +67,7 @@ export const CURRENCIES = [
   { code: "INR", symbol: "₹", label: "Indian Rupee" },
   { code: "JPY", symbol: "¥", label: "Japanese Yen" },
   { code: "BRL", symbol: "R$", label: "Brazilian Real" },
+  { code: "PHP", symbol: "₱", label: "Philippine Peso" },
 ];
 
 export const NAV_ITEMS = [
