@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Offline · FreelanceFlow</title>
+    <style>
+      :root { color-scheme: light dark; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100dvh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: system-ui, -apple-system, sans-serif;
+        background: #0b1120;
+        color: #e2e8f0;
+        padding: 24px;
+        text-align: center;
+      }
+      .card { max-width: 360px; }
+      .mark {
+        width: 56px; height: 56px; margin: 0 auto 20px;
+        border-radius: 16px;
+        background: linear-gradient(135deg, #3b82f6, #4f46e5);
+        display: flex; align-items: center; justify-content: center;
+      }
+      h1 { font-size: 20px; margin: 0 0 8px; }
+      p { color: #94a3b8; font-size: 14px; line-height: 1.5; margin: 0 0 20px; }
+      button {
+        background: #2563eb; color: white; border: 0; border-radius: 10px;
+        padding: 10px 20px; font-size: 14px; font-weight: 600; cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="mark">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
+          <path d="M4 16.5L9 11l3.5 3.5L20 7" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M15 7h5v5" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <h1>You're offline</h1>
+      <p>FreelanceFlow needs a connection to load your latest invoices and income. Check your network and try again.</p>
+      <button onclick="location.reload()">Retry</button>
+    </div>
+  </body>
+</html>
