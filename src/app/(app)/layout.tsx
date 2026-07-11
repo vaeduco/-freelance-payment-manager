@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { ToastProvider } from "@/components/ui/toast";
 import { Sidebar } from "@/components/app/sidebar";
 import { MobileTopBar, MobileBottomNav } from "@/components/app/mobile-nav";
@@ -13,6 +14,12 @@ export default async function AppLayout({
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  // Defense-in-depth: enforce auth server-side, not just in middleware.
+  if (!user) {
+    redirect("/login");
+  }
+
   const profile = await getProfile();
 
   const name =
