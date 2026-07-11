@@ -14,6 +14,6 @@ export const config = {
      * - favicon.ico, robots.txt, manifest, service worker
      * - static asset files (images, icons)
      */
-    "/((?!_next/static|_next/image|favicon.ico|robots.txt|manifest.webmanifest|sw.js|icons/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|robots.txt|manifest.webmanifest|sw.js|offline.html|icons/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };

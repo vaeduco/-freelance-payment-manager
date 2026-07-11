@@ -49,6 +49,21 @@ export function PaymentFormModal({
   const [notes, setNotes] = useState(payment?.notes ?? "");
   const [loading, setLoading] = useState(false);
 
+  // Re-seed fields from props each time the modal opens, so editing shows the
+  // payment's real data and the create form always opens clean.
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (open && !prevOpen) {
+    setPrevOpen(true);
+    setClientId(payment?.client_id ?? defaultClientId ?? "");
+    setInvoiceId(payment?.invoice_id ?? "");
+    setAmount(payment ? String(payment.amount) : "");
+    setPaymentDate(payment?.payment_date ?? todayISO());
+    setProjectType(payment?.project_type ?? "");
+    setNotes(payment?.notes ?? "");
+  } else if (!open && prevOpen) {
+    setPrevOpen(false);
+  }
+
   // Only offer unpaid invoices for linking (plus the currently linked one).
   const linkableInvoices = invoices.filter(
     (i) => i.status !== "paid" || i.id === payment?.invoice_id,
@@ -166,7 +181,7 @@ export function PaymentFormModal({
               ))}
             </Select>
             <p className="text-xs text-muted-foreground">
-              Linking a payment marks that invoice as paid.
+              Applied to the invoice; it&apos;s marked paid once fully covered.
             </p>
           </div>
         )}

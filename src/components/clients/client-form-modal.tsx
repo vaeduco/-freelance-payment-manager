@@ -37,6 +37,20 @@ export function ClientFormModal({
   const [flagged, setFlagged] = useState(client?.is_flagged ?? false);
   const [loading, setLoading] = useState(false);
 
+  // Re-seed fields from props each time the modal opens, so editing shows the
+  // client's real data and the add form always opens clean.
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (open && !prevOpen) {
+    setPrevOpen(true);
+    setName(client?.name ?? "");
+    setEmail(client?.email ?? "");
+    setCompany(client?.company ?? "");
+    setNotes(client?.notes ?? "");
+    setFlagged(client?.is_flagged ?? false);
+  } else if (!open && prevOpen) {
+    setPrevOpen(false);
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) return toast("Enter a client name", "error");

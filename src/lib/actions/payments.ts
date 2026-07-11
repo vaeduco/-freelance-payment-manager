@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/auth";
+import { reconcileInvoicePaidStatus } from "@/lib/invoice-sync";
 
 export interface PaymentInput {
   client_id: string | null;
@@ -40,14 +41,8 @@ export async function createPayment(
     });
     if (error) throw error;
 
-    // If this payment settles an invoice, mark it paid.
-    if (input.invoice_id) {
-      await supabase
-        .from("invoices")
-        .update({ status: "paid", paid_at: new Date().toISOString() })
-        .eq("id", input.invoice_id)
-        .neq("status", "paid");
-    }
+    // Mark the linked invoice paid only once payments cover its amount.
+    await reconcileInvoicePaidStatus(supabase, input.invoice_id);
 
     revalidateAll();
     return { ok: true };
@@ -63,6 +58,14 @@ export async function updatePayment(
   try {
     await requireUser();
     const supabase = await createClient();
+
+    // Capture the previous invoice link so we can reconcile both invoices.
+    const { data: prev } = await supabase
+      .from("payments")
+      .select("invoice_id")
+      .eq("id", id)
+      .maybeSingle();
+
     const { error } = await supabase
       .from("payments")
       .update({
@@ -75,6 +78,14 @@ export async function updatePayment(
       })
       .eq("id", id);
     if (error) throw error;
+
+    const prevInvoiceId = (prev as { invoice_id: string | null } | null)
+      ?.invoice_id;
+    if (prevInvoiceId && prevInvoiceId !== input.invoice_id) {
+      await reconcileInvoicePaidStatus(supabase, prevInvoiceId);
+    }
+    await reconcileInvoicePaidStatus(supabase, input.invoice_id);
+
     revalidateAll();
     return { ok: true };
   } catch (e) {
@@ -86,8 +97,22 @@ export async function deletePayment(id: string): Promise<ActionResult> {
   try {
     await requireUser();
     const supabase = await createClient();
+
+    // Capture the invoice link before deleting so we can revert its status.
+    const { data: prev } = await supabase
+      .from("payments")
+      .select("invoice_id")
+      .eq("id", id)
+      .maybeSingle();
+
     const { error } = await supabase.from("payments").delete().eq("id", id);
     if (error) throw error;
+
+    await reconcileInvoicePaidStatus(
+      supabase,
+      (prev as { invoice_id: string | null } | null)?.invoice_id,
+    );
+
     revalidateAll();
     return { ok: true };
   } catch (e) {

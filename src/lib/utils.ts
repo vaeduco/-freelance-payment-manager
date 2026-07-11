@@ -112,7 +112,9 @@ export function toCSV(rows: Array<Record<string, unknown>>, headers?: string[]):
   const cols = headers ?? Object.keys(rows[0]);
   const escape = (val: unknown) => {
     if (val === null || val === undefined) return "";
-    const s = String(val);
+    let s = String(val);
+    // Neutralize spreadsheet formula injection (=, +, -, @, tab, CR leads).
+    if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
     if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
     return s;
   };

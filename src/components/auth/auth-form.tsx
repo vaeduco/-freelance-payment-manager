@@ -51,7 +51,15 @@ export function AuthForm({
           return;
         }
       }
-      router.push(redirectedFrom || "/dashboard");
+      // Only follow same-origin relative paths to prevent open redirects.
+      const dest =
+        redirectedFrom &&
+        redirectedFrom.startsWith("/") &&
+        !redirectedFrom.startsWith("//") &&
+        !redirectedFrom.startsWith("/\\")
+          ? redirectedFrom
+          : "/dashboard";
+      router.push(dest);
       router.refresh();
     } finally {
       setLoading(false);

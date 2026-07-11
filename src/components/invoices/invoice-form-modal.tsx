@@ -60,6 +60,28 @@ export function InvoiceFormModal({
   const [projectType, setProjectType] = useState(invoice?.project_type ?? "");
   const [loading, setLoading] = useState(false);
 
+  // Re-seed all fields from props each time the modal opens, so editing shows
+  // the invoice's real data and the create form always opens clean.
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (open && !prevOpen) {
+    setPrevOpen(true);
+    setClientId(invoice?.client_id ?? defaultClientId ?? "");
+    setDescription(invoice?.service_description ?? "");
+    setAmount(invoice ? String(invoice.amount) : "");
+    setStatus(
+      invoice && invoice.status !== "overdue"
+        ? invoice.status
+        : invoice
+          ? "sent"
+          : "draft",
+    );
+    setIssueDate(invoice?.issue_date ?? today);
+    setDueDate(invoice?.due_date ?? addDays(today, 14));
+    setProjectType(invoice?.project_type ?? "");
+  } else if (!open && prevOpen) {
+    setPrevOpen(false);
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const amt = parseFloat(amount);

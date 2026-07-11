@@ -126,10 +126,31 @@ export async function updateInvoice(
       await supabase.from("payments").delete().eq("invoice_id", id);
     } else if (nowPaid && wasPaid && Number(prev.amount) !== input.amount) {
       // Still paid but amount changed -> keep income in sync.
-      await supabase
+      const { data: linked } = await supabase
         .from("payments")
-        .update({ amount: input.amount, project_type: input.project_type })
+        .select("id")
         .eq("invoice_id", id);
+      const linkedCount = linked?.length ?? 0;
+      if (linkedCount === 0) {
+        // Paid invoice with no backing payment (e.g. its payment was deleted):
+        // record the income so it isn't silently lost.
+        await supabase.from("payments").insert({
+          user_id: user.id,
+          invoice_id: id,
+          client_id: input.client_id,
+          amount: input.amount,
+          payment_date: todayISO(),
+          project_type: input.project_type,
+          notes: "Invoice marked paid",
+        });
+      } else if (linkedCount === 1) {
+        await supabase
+          .from("payments")
+          .update({ amount: input.amount, project_type: input.project_type })
+          .eq("invoice_id", id);
+      }
+      // If multiple payments are linked (manually logged partials), leave them
+      // untouched rather than clobbering the user's payment history.
     }
 
     revalidateAll();
