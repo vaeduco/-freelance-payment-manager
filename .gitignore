@@ -32,3 +32,10 @@ next-env.d.ts
 
 # Claude Code local preview config (machine-specific paths)
 .claude/
+
+# local export artifacts (downloaded during testing)
+export_*.zip
+invoices_*.csv
+payments_*.csv
+summary_*.csv
+income-*.csv
