@@ -40,11 +40,13 @@ export function InvoicesClient({
   clients,
   currency,
   paymentMethods,
+  projectTypeRates,
 }: {
   invoices: InvoiceWithClient[];
   clients: Client[];
   currency: string;
   paymentMethods: PaymentMethod[];
+  projectTypeRates: Record<string, number>;
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -427,6 +429,7 @@ export function InvoicesClient({
         onClose={() => setCreateOpen(false)}
         clients={clients}
         paymentMethods={paymentMethods}
+        projectTypeRates={projectTypeRates}
       />
 
       {/* Edit modal */}
@@ -436,6 +439,7 @@ export function InvoicesClient({
         clients={clients}
         invoice={editing}
         paymentMethods={paymentMethods}
+        projectTypeRates={projectTypeRates}
       />
 
       {/* Delete confirmation */}

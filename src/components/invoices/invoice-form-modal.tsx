@@ -8,14 +8,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
+import { cn, todayISO } from "@/lib/utils";
 import { PROJECT_TYPES } from "@/lib/constants";
-import { todayISO } from "@/lib/utils";
 import {
   createInvoice,
   updateInvoice,
   type InvoiceInput,
 } from "@/lib/actions/invoices";
 import type { Client, Invoice, PaymentMethod } from "@/lib/types";
+
+type RateType = "fixed" | "hourly";
 
 function addDays(iso: string, days: number): string {
   const [y, m, d] = iso.split("-").map(Number);
@@ -30,6 +32,7 @@ export function InvoiceFormModal({
   invoice,
   defaultClientId,
   paymentMethods = [],
+  projectTypeRates = {},
 }: {
   open: boolean;
   onClose: () => void;
@@ -37,6 +40,8 @@ export function InvoiceFormModal({
   invoice?: Invoice | null;
   defaultClientId?: string;
   paymentMethods?: PaymentMethod[];
+  /** project_type (lowercased) -> last hourly rate used, for prefill. */
+  projectTypeRates?: Record<string, number>;
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -64,6 +69,15 @@ export function InvoiceFormModal({
   const [paymentMethodId, setPaymentMethodId] = useState(
     invoice ? (invoice.payment_method_id ?? "") : defaultMethodId,
   );
+  const [rateType, setRateType] = useState<RateType>(
+    invoice?.rate_type ?? "fixed",
+  );
+  const [trackedHours, setTrackedHours] = useState(
+    invoice?.tracked_hours != null ? String(invoice.tracked_hours) : "",
+  );
+  const [hourlyRate, setHourlyRate] = useState(
+    invoice?.hourly_rate != null ? String(invoice.hourly_rate) : "",
+  );
   const [loading, setLoading] = useState(false);
 
   // Re-seed all fields from props each time the modal opens, so editing shows
@@ -85,6 +99,13 @@ export function InvoiceFormModal({
     setDueDate(invoice?.due_date ?? addDays(today, 14));
     setProjectType(invoice?.project_type ?? "");
     setPaymentMethodId(invoice ? (invoice.payment_method_id ?? "") : defaultMethodId);
+    setRateType(invoice?.rate_type ?? "fixed");
+    setTrackedHours(
+      invoice?.tracked_hours != null ? String(invoice.tracked_hours) : "",
+    );
+    setHourlyRate(
+      invoice?.hourly_rate != null ? String(invoice.hourly_rate) : "",
+    );
   } else if (!open && prevOpen) {
     setPrevOpen(false);
   }
@@ -92,12 +113,52 @@ export function InvoiceFormModal({
   const selectedMethod =
     paymentMethods.find((m) => m.id === paymentMethodId) ?? null;
 
+  // Amount is derived for hourly invoices; manual for fixed.
+  const hoursNum = parseFloat(trackedHours) || 0;
+  const rateNum = parseFloat(hourlyRate) || 0;
+  const computedAmount =
+    rateType === "hourly"
+      ? Math.round(hoursNum * rateNum * 100) / 100
+      : parseFloat(amount) || 0;
+
+  function rateForProjectType(pt: string): number | undefined {
+    return projectTypeRates[pt.trim().toLowerCase()];
+  }
+
+  // Prefill the hourly rate from the last rate used for this project type
+  // (only when empty, so we never clobber a rate the user typed).
+  function switchToHourly() {
+    setRateType("hourly");
+    if (!hourlyRate) {
+      const r = rateForProjectType(projectType);
+      if (r) setHourlyRate(String(r));
+    }
+  }
+
+  function onProjectTypeChange(value: string) {
+    setProjectType(value);
+    if (rateType === "hourly" && !hourlyRate) {
+      const r = rateForProjectType(value);
+      if (r) setHourlyRate(String(r));
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const amt = parseFloat(amount);
     if (!description.trim()) return toast("Add a service description", "error");
-    if (isNaN(amt) || amt < 0) return toast("Enter a valid amount", "error");
     if (!dueDate) return toast("Pick a due date", "error");
+
+    let amt: number;
+    if (rateType === "hourly") {
+      if (trackedHours.trim() === "" || hoursNum < 0)
+        return toast("Enter valid tracked hours", "error");
+      if (hourlyRate.trim() === "" || rateNum < 0)
+        return toast("Enter a valid hourly rate", "error");
+      amt = computedAmount;
+    } else {
+      amt = parseFloat(amount);
+      if (isNaN(amt) || amt < 0) return toast("Enter a valid amount", "error");
+    }
 
     const input: InvoiceInput = {
       client_id: clientId || null,
@@ -107,6 +168,9 @@ export function InvoiceFormModal({
       issue_date: issueDate,
       due_date: dueDate,
       project_type: projectType.trim() || null,
+      rate_type: rateType,
+      tracked_hours: rateType === "hourly" ? hoursNum : null,
+      hourly_rate: rateType === "hourly" ? rateNum : null,
       payment_method_id: paymentMethodId || null,
     };
 
@@ -165,6 +229,69 @@ export function InvoiceFormModal({
           />
         </div>
 
+        <div className="space-y-1.5">
+          <Label>Billing</Label>
+          <div className="grid grid-cols-2 gap-1 rounded-lg border border-border bg-secondary/50 p-1">
+            <button
+              type="button"
+              onClick={() => setRateType("fixed")}
+              aria-pressed={rateType === "fixed"}
+              className={cn(
+                "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                rateType === "fixed"
+                  ? "bg-card text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              Fixed
+            </button>
+            <button
+              type="button"
+              onClick={switchToHourly}
+              aria-pressed={rateType === "hourly"}
+              className={cn(
+                "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                rateType === "hourly"
+                  ? "bg-card text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              Hourly
+            </button>
+          </div>
+        </div>
+
+        {rateType === "hourly" && (
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="inv-hours">Tracked hours</Label>
+              <Input
+                id="inv-hours"
+                type="number"
+                min="0"
+                step="0.25"
+                inputMode="decimal"
+                value={trackedHours}
+                onChange={(e) => setTrackedHours(e.target.value)}
+                placeholder="0"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="inv-rate">Hourly rate</Label>
+              <Input
+                id="inv-rate"
+                type="number"
+                min="0"
+                step="0.01"
+                inputMode="decimal"
+                value={hourlyRate}
+                onChange={(e) => setHourlyRate(e.target.value)}
+                placeholder="0.00"
+              />
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <Label htmlFor="inv-amount">Amount</Label>
@@ -174,11 +301,19 @@ export function InvoiceFormModal({
               min="0"
               step="0.01"
               inputMode="decimal"
-              value={amount}
+              value={rateType === "hourly" ? computedAmount.toFixed(2) : amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="0.00"
-              required
+              readOnly={rateType === "hourly"}
+              disabled={rateType === "hourly"}
+              required={rateType === "fixed"}
+              className={cn(rateType === "hourly" && "bg-muted text-muted-foreground")}
             />
+            {rateType === "hourly" && (
+              <p className="text-xs text-muted-foreground">
+                Auto-calculated: tracked hours × hourly rate
+              </p>
+            )}
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="inv-status">Status</Label>
@@ -224,7 +359,7 @@ export function InvoiceFormModal({
             id="inv-type"
             list="project-types"
             value={projectType}
-            onChange={(e) => setProjectType(e.target.value)}
+            onChange={(e) => onProjectTypeChange(e.target.value)}
             placeholder="e.g. Web Development"
           />
           <datalist id="project-types">

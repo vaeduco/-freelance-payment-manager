@@ -43,6 +43,9 @@ create table if not exists public.invoices (
   issue_date date not null default current_date,
   due_date date not null,
   project_type text,
+  rate_type text not null default 'fixed' check (rate_type in ('fixed', 'hourly')),
+  tracked_hours numeric(10, 2) check (tracked_hours is null or tracked_hours >= 0),
+  hourly_rate numeric(12, 2) check (hourly_rate is null or hourly_rate >= 0),
   paid_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()

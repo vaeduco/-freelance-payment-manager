@@ -51,6 +51,9 @@ export interface Invoice {
   issue_date: string; // YYYY-MM-DD
   due_date: string; // YYYY-MM-DD
   project_type: string | null;
+  rate_type: "fixed" | "hourly";
+  tracked_hours: number | null;
+  hourly_rate: number | null;
   payment_method_id: string | null;
   paid_at: string | null;
   created_at: string;

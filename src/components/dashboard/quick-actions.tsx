@@ -12,10 +12,12 @@ export function QuickActions({
   clients,
   invoices,
   paymentMethods,
+  projectTypeRates,
 }: {
   clients: Client[];
   invoices: Invoice[];
   paymentMethods: PaymentMethod[];
+  projectTypeRates: Record<string, number>;
 }) {
   const [invoiceOpen, setInvoiceOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
@@ -55,6 +57,7 @@ export function QuickActions({
         onClose={() => setInvoiceOpen(false)}
         clients={clients}
         paymentMethods={paymentMethods}
+        projectTypeRates={projectTypeRates}
       />
       <PaymentFormModal
         open={paymentOpen}

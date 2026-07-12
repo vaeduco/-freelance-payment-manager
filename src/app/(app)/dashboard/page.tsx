@@ -16,7 +16,7 @@ import { getProfile } from "@/lib/data/profile";
 import { getClients } from "@/lib/data/clients";
 import { getInvoicesWithClients } from "@/lib/data/invoices";
 import { getPaymentMethods } from "@/lib/data/payment-methods";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, hourlyRatesByProjectType } from "@/lib/utils";
 
 export const metadata = { title: "Dashboard" };
 
@@ -57,6 +57,7 @@ export default async function DashboardPage() {
           clients={clients}
           invoices={invoices}
           paymentMethods={paymentMethods}
+          projectTypeRates={hourlyRatesByProjectType(invoices)}
         />
       </PageHeader>
 

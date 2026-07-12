@@ -14,6 +14,9 @@ export interface InvoiceInput {
   issue_date: string;
   due_date: string;
   project_type: string | null;
+  rate_type: "fixed" | "hourly";
+  tracked_hours: number | null;
+  hourly_rate: number | null;
   payment_method_id: string | null;
 }
 
@@ -44,6 +47,9 @@ export async function createInvoice(input: InvoiceInput): Promise<ActionResult> 
         issue_date: input.issue_date,
         due_date: input.due_date,
         project_type: input.project_type,
+        rate_type: input.rate_type,
+        tracked_hours: input.rate_type === "hourly" ? input.tracked_hours : null,
+        hourly_rate: input.rate_type === "hourly" ? input.hourly_rate : null,
         payment_method_id: input.payment_method_id,
         paid_at: paid ? new Date().toISOString() : null,
       })
@@ -100,6 +106,9 @@ export async function updateInvoice(
         issue_date: input.issue_date,
         due_date: input.due_date,
         project_type: input.project_type,
+        rate_type: input.rate_type,
+        tracked_hours: input.rate_type === "hourly" ? input.tracked_hours : null,
+        hourly_rate: input.rate_type === "hourly" ? input.hourly_rate : null,
         payment_method_id: input.payment_method_id,
         paid_at: nowPaid
           ? (prev.paid_at ?? new Date().toISOString())

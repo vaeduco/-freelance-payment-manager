@@ -142,6 +142,32 @@ export function downloadFile(
   URL.revokeObjectURL(url);
 }
 
+/**
+ * Map of project_type (lowercased) -> the most recently used hourly rate for
+ * that project type, from the user's hourly invoices. Assumes `invoices` is
+ * ordered most-recent-first (as getInvoicesWithClients returns them), so the
+ * first hourly invoice seen per project type wins.
+ */
+export function hourlyRatesByProjectType(
+  invoices: Array<
+    Pick<Invoice, "project_type" | "rate_type" | "hourly_rate">
+  >,
+): Record<string, number> {
+  const map: Record<string, number> = {};
+  for (const inv of invoices) {
+    if (
+      inv.rate_type === "hourly" &&
+      inv.hourly_rate != null &&
+      Number(inv.hourly_rate) > 0 &&
+      inv.project_type
+    ) {
+      const key = inv.project_type.trim().toLowerCase();
+      if (!(key in map)) map[key] = Number(inv.hourly_rate);
+    }
+  }
+  return map;
+}
+
 export function initials(name: string): string {
   return name
     .split(/\s+/)
