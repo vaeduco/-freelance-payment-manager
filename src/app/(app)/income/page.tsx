@@ -4,6 +4,7 @@ import { getPaymentsWithRelations } from "@/lib/data/payments";
 import { getClients } from "@/lib/data/clients";
 import { getInvoicesWithClients } from "@/lib/data/invoices";
 import { getProfile } from "@/lib/data/profile";
+import { getPaymentMethods } from "@/lib/data/payment-methods";
 import type { Invoice } from "@/lib/types";
 
 export const metadata: Metadata = {
@@ -11,12 +12,14 @@ export const metadata: Metadata = {
 };
 
 export default async function IncomePage() {
-  const [payments, clients, invoices, profile] = await Promise.all([
-    getPaymentsWithRelations(),
-    getClients(),
-    getInvoicesWithClients(),
-    getProfile(),
-  ]);
+  const [payments, clients, invoices, profile, paymentMethods] =
+    await Promise.all([
+      getPaymentsWithRelations(),
+      getClients(),
+      getInvoicesWithClients(),
+      getProfile(),
+      getPaymentMethods(),
+    ]);
 
   const currency = profile?.currency ?? "USD";
 
@@ -26,6 +29,7 @@ export default async function IncomePage() {
       clients={clients}
       invoices={invoices as Invoice[]}
       currency={currency}
+      paymentMethods={paymentMethods}
     />
   );
 }

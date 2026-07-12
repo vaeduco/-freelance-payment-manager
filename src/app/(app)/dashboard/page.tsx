@@ -15,17 +15,19 @@ import { getDashboardData } from "@/lib/data/dashboard";
 import { getProfile } from "@/lib/data/profile";
 import { getClients } from "@/lib/data/clients";
 import { getInvoicesWithClients } from "@/lib/data/invoices";
+import { getPaymentMethods } from "@/lib/data/payment-methods";
 import { formatCurrency } from "@/lib/utils";
 
 export const metadata = { title: "Dashboard" };
 
 export default async function DashboardPage() {
-  const [{ stats, monthly, activity }, profile, clients, invoices] =
+  const [{ stats, monthly, activity }, profile, clients, invoices, paymentMethods] =
     await Promise.all([
       getDashboardData(),
       getProfile(),
       getClients(),
       getInvoicesWithClients(),
+      getPaymentMethods(),
     ]);
 
   const currency = profile?.currency ?? "USD";
@@ -51,7 +53,11 @@ export default async function DashboardPage() {
         title="Dashboard"
         description={`Welcome back, ${firstName}`}
       >
-        <QuickActions clients={clients} invoices={invoices} />
+        <QuickActions
+          clients={clients}
+          invoices={invoices}
+          paymentMethods={paymentMethods}
+        />
       </PageHeader>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

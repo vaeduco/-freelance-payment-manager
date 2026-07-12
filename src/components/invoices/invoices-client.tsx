@@ -28,6 +28,7 @@ import type {
   Client,
   InvoiceStatus,
   InvoiceWithClient,
+  PaymentMethod,
 } from "@/lib/types";
 
 type StatusFilter = "all" | InvoiceStatus;
@@ -38,10 +39,12 @@ export function InvoicesClient({
   invoices,
   clients,
   currency,
+  paymentMethods,
 }: {
   invoices: InvoiceWithClient[];
   clients: Client[];
   currency: string;
+  paymentMethods: PaymentMethod[];
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -269,6 +272,11 @@ export function InvoicesClient({
                           <span className="line-clamp-1 text-muted-foreground">
                             {inv.service_description}
                           </span>
+                          {inv.payment_method && (
+                            <span className="mt-0.5 block text-xs text-muted-foreground/80">
+                              Pay via {inv.payment_method.name}
+                            </span>
+                          )}
                         </td>
                         <td className="px-5 py-3.5 text-right align-middle font-medium tabular-nums">
                           {formatCurrency(inv.amount, currency)}
@@ -350,6 +358,11 @@ export function InvoicesClient({
                   <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">
                     {inv.service_description}
                   </p>
+                  {inv.payment_method && (
+                    <p className="mt-0.5 text-xs text-muted-foreground/80">
+                      Pay via {inv.payment_method.name}
+                    </p>
+                  )}
 
                   <div className="mt-3 flex items-end justify-between gap-3">
                     <div>
@@ -413,6 +426,7 @@ export function InvoicesClient({
         open={createOpen}
         onClose={() => setCreateOpen(false)}
         clients={clients}
+        paymentMethods={paymentMethods}
       />
 
       {/* Edit modal */}
@@ -421,6 +435,7 @@ export function InvoicesClient({
         onClose={() => setEditing(null)}
         clients={clients}
         invoice={editing}
+        paymentMethods={paymentMethods}
       />
 
       {/* Delete confirmation */}

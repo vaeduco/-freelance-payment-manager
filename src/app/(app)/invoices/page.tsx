@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getInvoicesWithClients } from "@/lib/data/invoices";
 import { getClients } from "@/lib/data/clients";
 import { getProfile } from "@/lib/data/profile";
+import { getPaymentMethods } from "@/lib/data/payment-methods";
 import { InvoicesClient } from "@/components/invoices/invoices-client";
 
 export const metadata: Metadata = {
@@ -9,10 +10,11 @@ export const metadata: Metadata = {
 };
 
 export default async function InvoicesPage() {
-  const [invoices, clients, profile] = await Promise.all([
+  const [invoices, clients, profile, paymentMethods] = await Promise.all([
     getInvoicesWithClients(),
     getClients(),
     getProfile(),
+    getPaymentMethods(),
   ]);
 
   return (
@@ -20,6 +22,7 @@ export default async function InvoicesPage() {
       invoices={invoices}
       clients={clients}
       currency={profile?.currency ?? "USD"}
+      paymentMethods={paymentMethods}
     />
   );
 }

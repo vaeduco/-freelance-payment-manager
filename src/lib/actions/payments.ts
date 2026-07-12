@@ -11,6 +11,7 @@ export interface PaymentInput {
   amount: number;
   payment_date: string;
   project_type: string | null;
+  payment_method_id: string | null;
   notes: string | null;
 }
 
@@ -37,6 +38,7 @@ export async function createPayment(
       amount: input.amount,
       payment_date: input.payment_date,
       project_type: input.project_type,
+      payment_method_id: input.payment_method_id,
       notes: input.notes,
     });
     if (error) throw error;
@@ -74,6 +76,7 @@ export async function updatePayment(
         amount: input.amount,
         payment_date: input.payment_date,
         project_type: input.project_type,
+        payment_method_id: input.payment_method_id,
         notes: input.notes,
       })
       .eq("id", id);

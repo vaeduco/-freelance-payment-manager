@@ -5,7 +5,9 @@ export async function getInvoicesWithClients(): Promise<InvoiceWithClient[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("invoices")
-    .select("*, client:clients(id, name, company)")
+    .select(
+      "*, client:clients(id, name, company), payment_method:payment_methods(id, name, account_name, details)",
+    )
     .order("issue_date", { ascending: false })
     .order("created_at", { ascending: false });
 
@@ -17,7 +19,9 @@ export async function getInvoice(id: string): Promise<InvoiceWithClient | null> 
   const supabase = await createClient();
   const { data } = await supabase
     .from("invoices")
-    .select("*, client:clients(id, name, company)")
+    .select(
+      "*, client:clients(id, name, company), payment_method:payment_methods(id, name, account_name, details)",
+    )
     .eq("id", id)
     .maybeSingle();
   return (data as unknown as InvoiceWithClient) ?? null;

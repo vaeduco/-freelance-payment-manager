@@ -15,7 +15,7 @@ import {
   updateInvoice,
   type InvoiceInput,
 } from "@/lib/actions/invoices";
-import type { Client, Invoice } from "@/lib/types";
+import type { Client, Invoice, PaymentMethod } from "@/lib/types";
 
 function addDays(iso: string, days: number): string {
   const [y, m, d] = iso.split("-").map(Number);
@@ -29,18 +29,21 @@ export function InvoiceFormModal({
   clients,
   invoice,
   defaultClientId,
+  paymentMethods = [],
 }: {
   open: boolean;
   onClose: () => void;
   clients: Client[];
   invoice?: Invoice | null;
   defaultClientId?: string;
+  paymentMethods?: PaymentMethod[];
 }) {
   const router = useRouter();
   const { toast } = useToast();
   const isEdit = !!invoice;
 
   const today = todayISO();
+  const defaultMethodId = paymentMethods.find((m) => m.is_default)?.id ?? "";
   const [clientId, setClientId] = useState(
     invoice?.client_id ?? defaultClientId ?? "",
   );
@@ -58,6 +61,9 @@ export function InvoiceFormModal({
     invoice?.due_date ?? addDays(today, 14),
   );
   const [projectType, setProjectType] = useState(invoice?.project_type ?? "");
+  const [paymentMethodId, setPaymentMethodId] = useState(
+    invoice ? (invoice.payment_method_id ?? "") : defaultMethodId,
+  );
   const [loading, setLoading] = useState(false);
 
   // Re-seed all fields from props each time the modal opens, so editing shows
@@ -78,9 +84,13 @@ export function InvoiceFormModal({
     setIssueDate(invoice?.issue_date ?? today);
     setDueDate(invoice?.due_date ?? addDays(today, 14));
     setProjectType(invoice?.project_type ?? "");
+    setPaymentMethodId(invoice ? (invoice.payment_method_id ?? "") : defaultMethodId);
   } else if (!open && prevOpen) {
     setPrevOpen(false);
   }
+
+  const selectedMethod =
+    paymentMethods.find((m) => m.id === paymentMethodId) ?? null;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -97,6 +107,7 @@ export function InvoiceFormModal({
       issue_date: issueDate,
       due_date: dueDate,
       project_type: projectType.trim() || null,
+      payment_method_id: paymentMethodId || null,
     };
 
     setLoading(true);
@@ -221,6 +232,44 @@ export function InvoiceFormModal({
               <option key={t} value={t} />
             ))}
           </datalist>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="inv-method">Payment method</Label>
+          <Select
+            id="inv-method"
+            value={paymentMethodId}
+            onChange={(e) => setPaymentMethodId(e.target.value)}
+          >
+            <option value="">None</option>
+            {paymentMethods.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.name}
+                {m.is_default ? " (default)" : ""}
+              </option>
+            ))}
+          </Select>
+          {paymentMethods.length === 0 ? (
+            <p className="text-xs text-muted-foreground">
+              Add methods under Payment Methods so clients know how to pay you.
+            </p>
+          ) : selectedMethod && (selectedMethod.account_name || selectedMethod.details) ? (
+            <div className="rounded-lg border border-border bg-secondary/50 px-3 py-2 text-xs">
+              {selectedMethod.account_name && (
+                <div className="font-medium text-foreground">
+                  {selectedMethod.account_name}
+                </div>
+              )}
+              {selectedMethod.details && (
+                <div className="break-words text-muted-foreground">
+                  {selectedMethod.details}
+                </div>
+              )}
+              <div className="mt-1 text-muted-foreground">
+                Shown on the invoice so your client knows how to pay.
+              </div>
+            </div>
+          ) : null}
         </div>
 
         <div className="flex justify-end gap-3 pt-2">

@@ -14,6 +14,7 @@ export interface InvoiceInput {
   issue_date: string;
   due_date: string;
   project_type: string | null;
+  payment_method_id: string | null;
 }
 
 type ActionResult = { ok: true } | { error: string };
@@ -43,6 +44,7 @@ export async function createInvoice(input: InvoiceInput): Promise<ActionResult> 
         issue_date: input.issue_date,
         due_date: input.due_date,
         project_type: input.project_type,
+        payment_method_id: input.payment_method_id,
         paid_at: paid ? new Date().toISOString() : null,
       })
       .select("id")
@@ -57,6 +59,7 @@ export async function createInvoice(input: InvoiceInput): Promise<ActionResult> 
         amount: input.amount,
         payment_date: todayISO(),
         project_type: input.project_type,
+        payment_method_id: input.payment_method_id,
         notes: "Invoice marked paid",
       });
     }
@@ -97,6 +100,7 @@ export async function updateInvoice(
         issue_date: input.issue_date,
         due_date: input.due_date,
         project_type: input.project_type,
+        payment_method_id: input.payment_method_id,
         paid_at: nowPaid
           ? (prev.paid_at ?? new Date().toISOString())
           : null,
@@ -118,6 +122,7 @@ export async function updateInvoice(
           amount: input.amount,
           payment_date: todayISO(),
           project_type: input.project_type,
+          payment_method_id: input.payment_method_id,
           notes: "Invoice marked paid",
         });
       }
@@ -141,6 +146,7 @@ export async function updateInvoice(
           amount: input.amount,
           payment_date: todayISO(),
           project_type: input.project_type,
+          payment_method_id: input.payment_method_id,
           notes: "Invoice marked paid",
         });
       } else if (linkedCount === 1) {
@@ -194,6 +200,7 @@ export async function markInvoicePaid(id: string): Promise<ActionResult> {
         amount: inv.amount,
         payment_date: todayISO(),
         project_type: inv.project_type,
+        payment_method_id: inv.payment_method_id,
         notes: "Invoice marked paid",
       });
     }

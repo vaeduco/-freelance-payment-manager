@@ -42,6 +42,35 @@ export const STATUS_META: Record<InvoiceStatus, StatusMeta> = {
   },
 };
 
+/** Common payment methods to suggest; users may also type their own. */
+export const PAYMENT_METHOD_SUGGESTIONS = [
+  "Bank Transfer",
+  "PayPal",
+  "GCash",
+  "Wise",
+  "Payoneer",
+  "Crypto",
+  "Cash",
+  "Check",
+  "Credit Card",
+  "Venmo",
+];
+
+/**
+ * Fixed palette for the payment-method breakdown chart. Uses theme-independent
+ * HSL values that read well in both light and dark mode.
+ */
+export const CHART_COLORS = [
+  "hsl(221 83% 53%)", // blue
+  "hsl(142 71% 45%)", // green
+  "hsl(38 92% 50%)", // amber
+  "hsl(280 65% 60%)", // purple
+  "hsl(340 75% 55%)", // pink
+  "hsl(190 80% 42%)", // cyan
+  "hsl(24 90% 55%)", // orange
+  "hsl(160 60% 40%)", // teal
+];
+
 /** Suggested project types; users may also type their own. */
 export const PROJECT_TYPES = [
   "Web Development",

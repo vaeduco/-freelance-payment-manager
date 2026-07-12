@@ -24,6 +24,23 @@ export interface Client {
   updated_at: string;
 }
 
+export interface PaymentMethod {
+  id: string;
+  user_id: string;
+  name: string;
+  account_name: string | null;
+  details: string | null;
+  is_default: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Embedded (joined) payment-method shape returned by queries. */
+export type PaymentMethodRef = Pick<
+  PaymentMethod,
+  "id" | "name" | "account_name" | "details"
+>;
+
 export interface Invoice {
   id: string;
   user_id: string;
@@ -34,6 +51,7 @@ export interface Invoice {
   issue_date: string; // YYYY-MM-DD
   due_date: string; // YYYY-MM-DD
   project_type: string | null;
+  payment_method_id: string | null;
   paid_at: string | null;
   created_at: string;
   updated_at: string;
@@ -47,6 +65,7 @@ export interface Payment {
   amount: number;
   payment_date: string; // YYYY-MM-DD
   project_type: string | null;
+  payment_method_id: string | null;
   notes: string | null;
   created_at: string;
 }
@@ -54,12 +73,14 @@ export interface Payment {
 /** Invoice joined with its client (as returned by our queries). */
 export interface InvoiceWithClient extends Invoice {
   client: Pick<Client, "id" | "name" | "company"> | null;
+  payment_method: PaymentMethodRef | null;
 }
 
 /** Payment joined with client + invoice context. */
 export interface PaymentWithRelations extends Payment {
   client: Pick<Client, "id" | "name"> | null;
   invoice: Pick<Invoice, "id" | "service_description"> | null;
+  payment_method: PaymentMethodRef | null;
 }
 
 /** Client augmented with aggregate payment stats. */

@@ -6,14 +6,16 @@ import { Button } from "@/components/ui/button";
 import { InvoiceFormModal } from "@/components/invoices/invoice-form-modal";
 import { PaymentFormModal } from "@/components/payments/payment-form-modal";
 import { ClientFormModal } from "@/components/clients/client-form-modal";
-import type { Client, Invoice } from "@/lib/types";
+import type { Client, Invoice, PaymentMethod } from "@/lib/types";
 
 export function QuickActions({
   clients,
   invoices,
+  paymentMethods,
 }: {
   clients: Client[];
   invoices: Invoice[];
+  paymentMethods: PaymentMethod[];
 }) {
   const [invoiceOpen, setInvoiceOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
@@ -52,12 +54,14 @@ export function QuickActions({
         open={invoiceOpen}
         onClose={() => setInvoiceOpen(false)}
         clients={clients}
+        paymentMethods={paymentMethods}
       />
       <PaymentFormModal
         open={paymentOpen}
         onClose={() => setPaymentOpen(false)}
         clients={clients}
         invoices={invoices}
+        paymentMethods={paymentMethods}
       />
       <ClientFormModal
         open={clientOpen}

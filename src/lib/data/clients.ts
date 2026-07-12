@@ -59,7 +59,9 @@ export async function getClientHistory(clientId: string): Promise<{
       .order("issue_date", { ascending: false }),
     supabase
       .from("payments")
-      .select("*, client:clients(id, name), invoice:invoices(id, service_description)")
+      .select(
+        "*, client:clients(id, name), invoice:invoices(id, service_description), payment_method:payment_methods(id, name, account_name, details)",
+      )
       .eq("client_id", clientId)
       .order("payment_date", { ascending: false }),
   ]);

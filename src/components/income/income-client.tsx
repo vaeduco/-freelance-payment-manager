@@ -11,10 +11,17 @@ import {
   Wallet,
   Hash,
   CalendarRange,
+  CreditCard,
 } from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +30,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useToast } from "@/components/ui/toast";
 import { StatCard } from "@/components/stat-card";
 import { IncomeBarChart } from "@/components/charts/income-bar-chart";
+import { PaymentMethodBreakdown } from "@/components/charts/payment-method-breakdown";
 import { PaymentFormModal } from "@/components/payments/payment-form-modal";
 import { deletePayment } from "@/lib/actions/payments";
 import {
@@ -40,6 +48,7 @@ import type {
   Invoice,
   MonthlyIncomePoint,
   Payment,
+  PaymentMethod,
   PaymentWithRelations,
 } from "@/lib/types";
 
@@ -57,11 +66,13 @@ export function IncomeClient({
   clients,
   invoices,
   currency,
+  paymentMethods,
 }: {
   payments: PaymentWithRelations[];
   clients: Client[];
   invoices: Invoice[];
   currency: string;
+  paymentMethods: PaymentMethod[];
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -70,6 +81,7 @@ export function IncomeClient({
   const [month, setMonth] = useState("all");
   const [clientId, setClientId] = useState("all");
   const [projectType, setProjectType] = useState("all");
+  const [methodId, setMethodId] = useState("all");
 
   // Modal / dialog state
   const [createOpen, setCreateOpen] = useState(false);
@@ -105,9 +117,10 @@ export function IncomeClient({
       if (month !== "all" && monthKey(p.payment_date) !== month) return false;
       if (clientId !== "all" && p.client_id !== clientId) return false;
       if (projectType !== "all" && p.project_type !== projectType) return false;
+      if (methodId !== "all" && p.payment_method_id !== methodId) return false;
       return true;
     });
-  }, [payments, month, clientId, projectType]);
+  }, [payments, month, clientId, projectType, methodId]);
 
   // Summary figures
   const filteredTotal = useMemo(
@@ -136,8 +149,21 @@ export function IncomeClient({
     }));
   }, [filteredPayments]);
 
+  // Breakdown of (filtered) income by payment method label.
+  const breakdown = useMemo(() => {
+    const totals = new Map<string, number>();
+    for (const p of filteredPayments) {
+      const label = p.payment_method?.name ?? "Unspecified";
+      totals.set(label, (totals.get(label) ?? 0) + p.amount);
+    }
+    return Array.from(totals, ([label, value]) => ({ label, value }));
+  }, [filteredPayments]);
+
   const hasFilters =
-    month !== "all" || clientId !== "all" || projectType !== "all";
+    month !== "all" ||
+    clientId !== "all" ||
+    projectType !== "all" ||
+    methodId !== "all";
 
   function handleExport() {
     const rows = filteredPayments.map((p) => ({
@@ -145,6 +171,7 @@ export function IncomeClient({
       Client: p.client?.name ?? "—",
       Source: sourceLabel(p),
       "Project Type": p.project_type ?? "",
+      "Payment Method": p.payment_method?.name ?? "",
       Amount: p.amount,
     }));
     const csv = toCSV(rows, [
@@ -152,6 +179,7 @@ export function IncomeClient({
       "Client",
       "Source",
       "Project Type",
+      "Payment Method",
       "Amount",
     ]);
     downloadFile(csv, `income-${todayISO()}.csv`);
@@ -204,6 +232,7 @@ export function IncomeClient({
           onClose={() => setCreateOpen(false)}
           clients={clients}
           invoices={invoices}
+          paymentMethods={paymentMethods}
         />
       </>
     );
@@ -296,17 +325,45 @@ export function IncomeClient({
             ))}
           </Select>
         </div>
+
+        <div className="space-y-1.5 sm:w-48">
+          <Label htmlFor="filter-method">Payment method</Label>
+          <Select
+            id="filter-method"
+            value={methodId}
+            onChange={(e) => setMethodId(e.target.value)}
+          >
+            <option value="all">All methods</option>
+            {paymentMethods.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.name}
+              </option>
+            ))}
+          </Select>
+        </div>
       </div>
 
-      {/* Chart */}
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle>Monthly income</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <IncomeBarChart data={monthlyData} currency={currency} />
-        </CardContent>
-      </Card>
+      {/* Charts */}
+      <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Monthly income</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <IncomeBarChart data={monthlyData} currency={currency} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Payment methods</CardTitle>
+            <CardDescription>How your clients pay you</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <PaymentMethodBreakdown data={breakdown} currency={currency} />
+          </CardContent>
+        </Card>
+      </div>
 
       {/* List */}
       <div className="mt-6">
@@ -326,6 +383,7 @@ export function IncomeClient({
                       <th className="px-5 py-3 font-medium">Client</th>
                       <th className="px-5 py-3 font-medium">Source</th>
                       <th className="px-5 py-3 font-medium">Project type</th>
+                      <th className="px-5 py-3 font-medium">Method</th>
                       <th className="px-5 py-3 text-right font-medium">
                         Amount
                       </th>
@@ -352,6 +410,16 @@ export function IncomeClient({
                         <td className="px-5 py-3.5">
                           {p.project_type ? (
                             <Badge variant="secondary">{p.project_type}</Badge>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </td>
+                        <td className="px-5 py-3.5">
+                          {p.payment_method ? (
+                            <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+                              <CreditCard className="h-3.5 w-3.5 shrink-0" />
+                              {p.payment_method.name}
+                            </span>
                           ) : (
                             <span className="text-muted-foreground">—</span>
                           )}
@@ -401,6 +469,12 @@ export function IncomeClient({
                       <p className="text-xs text-muted-foreground">
                         {formatDate(p.payment_date)}
                       </p>
+                      {p.payment_method ? (
+                        <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <CreditCard className="h-3.5 w-3.5 shrink-0" />
+                          {p.payment_method.name}
+                        </p>
+                      ) : null}
                     </div>
                     <p className="shrink-0 font-semibold tabular-nums text-success">
                       {formatCurrency(p.amount, currency)}
@@ -448,6 +522,7 @@ export function IncomeClient({
         onClose={() => setCreateOpen(false)}
         clients={clients}
         invoices={invoices}
+        paymentMethods={paymentMethods}
       />
 
       {/* Edit modal */}
@@ -457,6 +532,7 @@ export function IncomeClient({
         clients={clients}
         invoices={invoices}
         payment={editing}
+        paymentMethods={paymentMethods}
       />
 
       {/* Delete confirmation */}

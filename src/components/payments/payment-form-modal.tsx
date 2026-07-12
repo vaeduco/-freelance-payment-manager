@@ -16,7 +16,7 @@ import {
   updatePayment,
   type PaymentInput,
 } from "@/lib/actions/payments";
-import type { Client, Invoice, Payment } from "@/lib/types";
+import type { Client, Invoice, Payment, PaymentMethod } from "@/lib/types";
 
 export function PaymentFormModal({
   open,
@@ -25,6 +25,7 @@ export function PaymentFormModal({
   invoices = [],
   payment,
   defaultClientId,
+  paymentMethods = [],
 }: {
   open: boolean;
   onClose: () => void;
@@ -32,10 +33,12 @@ export function PaymentFormModal({
   invoices?: Invoice[];
   payment?: Payment | null;
   defaultClientId?: string;
+  paymentMethods?: PaymentMethod[];
 }) {
   const router = useRouter();
   const { toast } = useToast();
   const isEdit = !!payment;
+  const defaultMethodId = paymentMethods.find((m) => m.is_default)?.id ?? "";
 
   const [clientId, setClientId] = useState(
     payment?.client_id ?? defaultClientId ?? "",
@@ -46,6 +49,9 @@ export function PaymentFormModal({
     payment?.payment_date ?? todayISO(),
   );
   const [projectType, setProjectType] = useState(payment?.project_type ?? "");
+  const [paymentMethodId, setPaymentMethodId] = useState(
+    payment ? (payment.payment_method_id ?? "") : defaultMethodId,
+  );
   const [notes, setNotes] = useState(payment?.notes ?? "");
   const [loading, setLoading] = useState(false);
 
@@ -59,6 +65,7 @@ export function PaymentFormModal({
     setAmount(payment ? String(payment.amount) : "");
     setPaymentDate(payment?.payment_date ?? todayISO());
     setProjectType(payment?.project_type ?? "");
+    setPaymentMethodId(payment ? (payment.payment_method_id ?? "") : defaultMethodId);
     setNotes(payment?.notes ?? "");
   } else if (!open && prevOpen) {
     setPrevOpen(false);
@@ -76,6 +83,8 @@ export function PaymentFormModal({
       if (!amount) setAmount(String(inv.amount));
       if (!clientId && inv.client_id) setClientId(inv.client_id);
       if (!projectType && inv.project_type) setProjectType(inv.project_type);
+      if (!paymentMethodId && inv.payment_method_id)
+        setPaymentMethodId(inv.payment_method_id);
     }
   }
 
@@ -91,6 +100,7 @@ export function PaymentFormModal({
       amount: amt,
       payment_date: paymentDate,
       project_type: projectType.trim() || null,
+      payment_method_id: paymentMethodId || null,
       notes: notes.trim() || null,
     };
 
@@ -200,6 +210,27 @@ export function PaymentFormModal({
               <option key={t} value={t} />
             ))}
           </datalist>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="pay-method">Payment method used</Label>
+          <Select
+            id="pay-method"
+            value={paymentMethodId}
+            onChange={(e) => setPaymentMethodId(e.target.value)}
+          >
+            <option value="">Not specified</option>
+            {paymentMethods.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.name}
+              </option>
+            ))}
+          </Select>
+          {paymentMethods.length === 0 && (
+            <p className="text-xs text-muted-foreground">
+              Add methods under Payment Methods to track how clients pay you.
+            </p>
+          )}
         </div>
 
         <div className="space-y-1.5">
