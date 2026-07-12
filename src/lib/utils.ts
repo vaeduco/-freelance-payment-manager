@@ -125,13 +125,8 @@ export function toCSV(rows: Array<Record<string, unknown>>, headers?: string[]):
   return lines.join("\n");
 }
 
-/** Trigger a browser download of `content` as a file (client-side only). */
-export function downloadFile(
-  content: string,
-  filename: string,
-  mime = "text/csv;charset=utf-8;",
-) {
-  const blob = new Blob([content], { type: mime });
+/** Trigger a browser download of a Blob as a file (client-side only). */
+export function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -140,6 +135,15 @@ export function downloadFile(
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+}
+
+/** Trigger a browser download of `content` as a file (client-side only). */
+export function downloadFile(
+  content: string,
+  filename: string,
+  mime = "text/csv;charset=utf-8;",
+) {
+  downloadBlob(new Blob([content], { type: mime }), filename);
 }
 
 /**

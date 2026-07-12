@@ -4,6 +4,7 @@ import {
   TrendingUp,
   Users,
   Calculator,
+  BarChart3,
   type LucideIcon,
 } from "lucide-react";
 
@@ -18,5 +19,6 @@ export const NAV: NavItem[] = [
   { href: "/invoices", label: "Invoices", Icon: FileText },
   { href: "/income", label: "Income", Icon: TrendingUp },
   { href: "/clients", label: "Clients", Icon: Users },
+  { href: "/reports", label: "Reports", Icon: BarChart3 },
   { href: "/tax", label: "Tax", Icon: Calculator },
 ];
