@@ -52,13 +52,13 @@ export function Sidebar({
                         key={sub.href}
                         href={sub.href}
                         className={cn(
-                          "flex items-center gap-3 rounded-lg py-2 pl-10 pr-3 text-sm font-medium transition-colors",
+                          "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                           subActive
                             ? "bg-primary/10 text-primary"
                             : "text-muted-foreground hover:bg-secondary hover:text-foreground",
                         )}
                       >
-                        <sub.Icon className="h-4 w-4" />
+                        <sub.Icon className="h-[18px] w-[18px]" />
                         {sub.label}
                       </Link>
                     );
