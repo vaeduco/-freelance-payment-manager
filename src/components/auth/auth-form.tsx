@@ -145,7 +145,12 @@ export function AuthForm({
         </div>
       )}
 
-      <Button type="submit" className="w-full" size="lg" disabled={loading}>
+      <Button
+        type="submit"
+        size="lg"
+        disabled={loading}
+        className="w-full !bg-[#185fa5] !text-white hover:!bg-[#154f88]"
+      >
         {loading && <Loader2 className="h-4 w-4 animate-spin" />}
         {isSignup ? "Create account" : "Sign in"}
       </Button>
@@ -154,7 +159,7 @@ export function AuthForm({
         {isSignup ? "Already have an account? " : "New to FreelanceFlow? "}
         <Link
           href={isSignup ? "/login" : "/signup"}
-          className="font-medium text-primary hover:underline"
+          className="font-medium text-[#185fa5] hover:underline dark:text-[#5aa2e0]"
         >
           {isSignup ? "Sign in" : "Create an account"}
         </Link>
