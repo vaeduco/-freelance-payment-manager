@@ -1,9 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { LogOut, ChevronsUpDown, Settings, Wallet } from "lucide-react";
+import { LogOut, ChevronsUpDown } from "lucide-react";
 import { signOut } from "@/lib/actions/auth";
 import { Avatar } from "@/components/ui/misc";
 import { cn } from "@/lib/utils";
@@ -60,22 +59,6 @@ export function UserMenu({
             align === "up" ? "bottom-full mb-2" : "top-full mt-2",
           )}
         >
-          <Link
-            href="/payment-methods"
-            onClick={() => setOpen(false)}
-            className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-foreground transition-colors hover:bg-secondary"
-          >
-            <Wallet className="h-4 w-4" />
-            Payment Methods
-          </Link>
-          <Link
-            href="/settings"
-            onClick={() => setOpen(false)}
-            className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-foreground transition-colors hover:bg-secondary"
-          >
-            <Settings className="h-4 w-4" />
-            Settings
-          </Link>
           <button
             onClick={handleSignOut}
             disabled={loading}

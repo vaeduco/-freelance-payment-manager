@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { Wordmark } from "@/components/brand";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { UserMenu } from "@/components/app/user-menu";
-import { NAV } from "@/components/app/nav-items";
+import { NAV_FLAT } from "@/components/app/nav-items";
 import { cn } from "@/lib/utils";
 
 export function MobileTopBar({
@@ -33,22 +33,22 @@ export function MobileBottomNav() {
   return (
     <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card/90 backdrop-blur lg:hidden">
       <div
-        className="mx-auto grid max-w-md grid-cols-6"
+        className="no-scrollbar flex overflow-x-auto"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
-        {NAV.map(({ href, label, Icon }) => {
+        {NAV_FLAT.map(({ href, label, shortLabel, Icon }) => {
           const active = pathname === href || pathname.startsWith(href + "/");
           return (
             <Link
               key={href}
               href={href}
               className={cn(
-                "flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition-colors",
+                "flex min-w-[4.5rem] flex-1 flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition-colors",
                 active ? "text-primary" : "text-muted-foreground",
               )}
             >
               <Icon className="h-5 w-5" />
-              {label}
+              {shortLabel ?? label}
             </Link>
           );
         })}

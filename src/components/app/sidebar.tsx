@@ -24,22 +24,48 @@ export function Sidebar({
       </div>
 
       <nav className="flex-1 space-y-1 p-3">
-        {NAV.map(({ href, label, Icon }) => {
-          const active = pathname === href || pathname.startsWith(href + "/");
+        {NAV.map((item) => {
+          const active =
+            pathname === item.href || pathname.startsWith(item.href + "/");
           return (
-            <Link
-              key={href}
-              href={href}
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                active
-                  ? "bg-primary/10 text-primary"
-                  : "text-muted-foreground hover:bg-secondary hover:text-foreground",
+            <div key={item.href}>
+              <Link
+                href={item.href}
+                className={cn(
+                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                  active
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:bg-secondary hover:text-foreground",
+                )}
+              >
+                <item.Icon className="h-[18px] w-[18px]" />
+                {item.label}
+              </Link>
+              {item.children && (
+                <div className="mt-1 space-y-1">
+                  {item.children.map((sub) => {
+                    const subActive =
+                      pathname === sub.href ||
+                      pathname.startsWith(sub.href + "/");
+                    return (
+                      <Link
+                        key={sub.href}
+                        href={sub.href}
+                        className={cn(
+                          "flex items-center gap-3 rounded-lg py-2 pl-10 pr-3 text-sm font-medium transition-colors",
+                          subActive
+                            ? "bg-primary/10 text-primary"
+                            : "text-muted-foreground hover:bg-secondary hover:text-foreground",
+                        )}
+                      >
+                        <sub.Icon className="h-4 w-4" />
+                        {sub.label}
+                      </Link>
+                    );
+                  })}
+                </div>
               )}
-            >
-              <Icon className="h-[18px] w-[18px]" />
-              {label}
-            </Link>
+            </div>
           );
         })}
       </nav>
