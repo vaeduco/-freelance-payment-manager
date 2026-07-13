@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  Archive,
+  ArchiveRestore,
   ArrowRight,
   Flag,
   Pencil,
@@ -21,7 +23,11 @@ import { Avatar, EmptyState } from "@/components/ui/misc";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useToast } from "@/components/ui/toast";
 import { ClientFormModal } from "@/components/clients/client-form-modal";
-import { deleteClientRecord, toggleClientFlag } from "@/lib/actions/clients";
+import {
+  deleteClientRecord,
+  setClientArchived,
+  toggleClientFlag,
+} from "@/lib/actions/clients";
 import { SLOW_PAYER_DAYS } from "@/lib/constants";
 import type { ClientWithStats } from "@/lib/types";
 import { cn, formatCurrency } from "@/lib/utils";
@@ -42,18 +48,25 @@ export function ClientsClient({
 }) {
   const [query, setQuery] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
+
+  const archivedCount = useMemo(
+    () => clients.filter((c) => c.is_archived).length,
+    [clients],
+  );
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return clients;
-    return clients.filter((c) =>
-      [c.name, c.company, c.email]
+    return clients.filter((c) => {
+      if (!showArchived && c.is_archived) return false;
+      if (!q) return true;
+      return [c.name, c.company, c.email]
         .filter(Boolean)
-        .some((field) => field!.toLowerCase().includes(q)),
-    );
-  }, [clients, query]);
+        .some((field) => field!.toLowerCase().includes(q));
+    });
+  }, [clients, query, showArchived]);
 
-  const hasClients = clients.length > 0;
+  const hasClients = clients.some((c) => !c.is_archived) || archivedCount > 0;
 
   return (
     <div>
@@ -65,16 +78,34 @@ export function ClientsClient({
       </PageHeader>
 
       {hasClients && (
-        <div className="relative mb-6 max-w-md">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search by name, company, or email"
-            aria-label="Search clients"
-            className="pl-9"
-          />
+        <div className="mb-6 flex flex-wrap items-center gap-3">
+          <div className="relative w-full max-w-md flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search by name, company, or email"
+              aria-label="Search clients"
+              className="pl-9"
+            />
+          </div>
+          {archivedCount > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowArchived((s) => !s)}
+              aria-pressed={showArchived}
+              className={cn(
+                "inline-flex shrink-0 items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
+                showArchived
+                  ? "border-primary/30 bg-primary/10 text-primary"
+                  : "border-border text-muted-foreground hover:bg-secondary",
+              )}
+            >
+              <Archive className="h-4 w-4" />
+              {showArchived ? "Hide archived" : `Show archived (${archivedCount})`}
+            </button>
+          )}
         </div>
       )}
 
@@ -91,11 +122,19 @@ export function ClientsClient({
           }
         />
       ) : filtered.length === 0 ? (
-        <EmptyState
-          icon={Search}
-          title="No matches"
-          description={`No clients match "${query.trim()}".`}
-        />
+        query.trim() ? (
+          <EmptyState
+            icon={Search}
+            title="No matches"
+            description={`No clients match "${query.trim()}".`}
+          />
+        ) : (
+          <EmptyState
+            icon={Archive}
+            title="No active clients"
+            description={`All your clients are archived. Use "Show archived (${archivedCount})" to view them.`}
+          />
+        )
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((client) => (
@@ -124,8 +163,21 @@ function ClientCard({
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [flagging, setFlagging] = useState(false);
+  const [archiving, setArchiving] = useState(false);
 
   const slow = isSlowPayer(client);
+
+  async function handleArchive() {
+    setArchiving(true);
+    const res = await setClientArchived(client.id, !client.is_archived);
+    setArchiving(false);
+    if ("error" in res) {
+      toast(res.error, "error");
+      return;
+    }
+    toast(client.is_archived ? "Client restored" : "Client archived", "info");
+    router.refresh();
+  }
 
   async function handleToggleFlag() {
     setFlagging(true);
@@ -153,7 +205,7 @@ function ClientCard({
   }
 
   return (
-    <Card className="flex flex-col p-5">
+    <Card className={cn("flex flex-col p-5", client.is_archived && "opacity-60")}>
       <div className="flex items-start gap-3">
         <Avatar name={client.name} className="h-10 w-10 text-sm" />
         <div className="min-w-0 flex-1">
@@ -169,12 +221,20 @@ function ClientCard({
             </p>
           )}
         </div>
-        {slow && (
-          <Badge variant="destructive" className="shrink-0">
-            <Flag className="h-3 w-3" />
-            Slow payer
-          </Badge>
-        )}
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          {client.is_archived && (
+            <Badge variant="secondary" className="shrink-0">
+              <Archive className="h-3 w-3" />
+              Archived
+            </Badge>
+          )}
+          {slow && (
+            <Badge variant="destructive" className="shrink-0">
+              <Flag className="h-3 w-3" />
+              Slow payer
+            </Badge>
+          )}
+        </div>
       </div>
 
       <dl className="mt-5 grid grid-cols-2 gap-x-4 gap-y-4">
@@ -237,6 +297,26 @@ function ClientCard({
               )}
             />
           )}
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
+          onClick={handleArchive}
+          loading={archiving}
+          aria-label={
+            client.is_archived
+              ? `Restore ${client.name}`
+              : `Archive ${client.name}`
+          }
+          title={client.is_archived ? "Restore" : "Archive"}
+        >
+          {!archiving &&
+            (client.is_archived ? (
+              <ArchiveRestore className="h-4 w-4 text-muted-foreground" />
+            ) : (
+              <Archive className="h-4 w-4 text-muted-foreground" />
+            ))}
         </Button>
         <Button
           variant="ghost"

@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ClientDetail } from "@/components/clients/client-detail";
-import { getClient, getClientHistory } from "@/lib/data/clients";
+import { getClient, getClientHistory, getClients } from "@/lib/data/clients";
 import { getProfile } from "@/lib/data/profile";
+import { getPaymentMethods } from "@/lib/data/payment-methods";
+import { getInvoicesWithClients } from "@/lib/data/invoices";
+import { hourlyRatesByProjectType } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "Client",
@@ -15,11 +18,15 @@ export default async function ClientDetailPage({
 }) {
   const { id } = await params;
 
-  const [client, history, profile] = await Promise.all([
-    getClient(id),
-    getClientHistory(id),
-    getProfile(),
-  ]);
+  const [client, history, profile, clients, paymentMethods, allInvoices] =
+    await Promise.all([
+      getClient(id),
+      getClientHistory(id),
+      getProfile(),
+      getClients(),
+      getPaymentMethods(),
+      getInvoicesWithClients(),
+    ]);
 
   if (!client) notFound();
 
@@ -31,6 +38,9 @@ export default async function ClientDetailPage({
       invoices={history.invoices}
       payments={history.payments}
       currency={currency}
+      clients={clients}
+      paymentMethods={paymentMethods}
+      projectTypeRates={hourlyRatesByProjectType(allInvoices)}
     />
   );
 }

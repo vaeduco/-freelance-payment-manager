@@ -87,6 +87,9 @@ export const PROJECT_TYPES = [
 /** Number of days without payment before a client is auto-flagged as slow. */
 export const SLOW_PAYER_DAYS = 45;
 
+/** Days without any invoice/payment activity before a client "needs attention". */
+export const NO_CONTACT_DAYS = 60;
+
 export const CURRENCIES = [
   { code: "USD", symbol: "$", label: "US Dollar" },
   { code: "EUR", symbol: "€", label: "Euro" },

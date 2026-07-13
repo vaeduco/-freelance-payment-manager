@@ -28,6 +28,7 @@ create table if not exists public.clients (
   company text,
   notes text,
   is_flagged boolean not null default false,
+  is_archived boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -67,6 +68,7 @@ create table if not exists public.payments (
 -- Indexes
 -- -----------------------------------------------------------------------------
 create index if not exists idx_clients_user on public.clients (user_id);
+create index if not exists idx_clients_user_archived on public.clients (user_id, is_archived);
 create index if not exists idx_invoices_user on public.invoices (user_id);
 create index if not exists idx_invoices_client on public.invoices (client_id);
 create index if not exists idx_invoices_user_status on public.invoices (user_id, status);

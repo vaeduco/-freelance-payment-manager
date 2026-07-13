@@ -89,6 +89,25 @@ export async function toggleClientFlag(
   }
 }
 
+export async function setClientArchived(
+  id: string,
+  archived: boolean,
+): Promise<ActionResult> {
+  try {
+    await requireUser();
+    const supabase = await createClient();
+    const { error } = await supabase
+      .from("clients")
+      .update({ is_archived: archived })
+      .eq("id", id);
+    if (error) throw error;
+    revalidateAll();
+    return { ok: true };
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+}
+
 export async function deleteClientRecord(id: string): Promise<ActionResult> {
   try {
     await requireUser();

@@ -93,6 +93,15 @@ export function computeClientStats(
             .at(-1)!
         : null;
 
+    // Most recent activity: latest invoice issue date or payment date,
+    // falling back to when the client was created.
+    const activityDates = [
+      client.created_at.slice(0, 10),
+      ...clientInvoices.map((i) => i.issue_date),
+      ...clientPayments.map((p) => p.payment_date),
+    ];
+    const last_activity = activityDates.sort().at(-1)!;
+
     // Average days to pay, based on invoices that were marked paid.
     const paidWithDates = clientInvoices.filter(
       (i) => i.status === "paid" && i.paid_at,
@@ -115,6 +124,7 @@ export function computeClientStats(
       invoice_count: clientInvoices.length,
       last_payment_date,
       avg_days_to_pay,
+      last_activity,
     };
   });
 }

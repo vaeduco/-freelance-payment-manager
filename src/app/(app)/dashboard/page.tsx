@@ -11,7 +11,8 @@ import { StatCard } from "@/components/stat-card";
 import { IncomeBarChart } from "@/components/charts/income-bar-chart";
 import { QuickActions } from "@/components/dashboard/quick-actions";
 import { RecentActivity } from "@/components/dashboard/recent-activity";
-import { getDashboardData } from "@/lib/data/dashboard";
+import { NeedsAttention } from "@/components/dashboard/needs-attention";
+import { getDashboardData, getNeedsAttention } from "@/lib/data/dashboard";
 import { getProfile } from "@/lib/data/profile";
 import { getClients } from "@/lib/data/clients";
 import { getInvoicesWithClients } from "@/lib/data/invoices";
@@ -21,14 +22,21 @@ import { formatCurrency, hourlyRatesByProjectType } from "@/lib/utils";
 export const metadata = { title: "Dashboard" };
 
 export default async function DashboardPage() {
-  const [{ stats, monthly, activity }, profile, clients, invoices, paymentMethods] =
-    await Promise.all([
-      getDashboardData(),
-      getProfile(),
-      getClients(),
-      getInvoicesWithClients(),
-      getPaymentMethods(),
-    ]);
+  const [
+    { stats, monthly, activity },
+    profile,
+    clients,
+    invoices,
+    paymentMethods,
+    needsAttention,
+  ] = await Promise.all([
+    getDashboardData(),
+    getProfile(),
+    getClients(),
+    getInvoicesWithClients(),
+    getPaymentMethods(),
+    getNeedsAttention(),
+  ]);
 
   const currency = profile?.currency ?? "USD";
   const firstName = (profile?.full_name || "there").split(" ")[0];
@@ -111,15 +119,24 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="lg:col-span-1">
-          <CardHeader>
-            <CardTitle>Recent activity</CardTitle>
-            <CardDescription>Your latest invoices and payments</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <RecentActivity items={activity} currency={currency} />
-          </CardContent>
-        </Card>
+        <div className="space-y-6 lg:col-span-1">
+          <NeedsAttention
+            overdue={needsAttention.overdue}
+            stale={needsAttention.stale}
+            currency={currency}
+          />
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent activity</CardTitle>
+              <CardDescription>
+                Your latest invoices and payments
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <RecentActivity items={activity} currency={currency} />
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );

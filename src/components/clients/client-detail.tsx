@@ -1,9 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
   CreditCard,
+  FilePlus,
   FileText,
   Mail,
   Receipt,
@@ -11,6 +13,8 @@ import {
 } from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
 import { StatCard } from "@/components/stat-card";
+import { Button } from "@/components/ui/button";
+import { InvoiceFormModal } from "@/components/invoices/invoice-form-modal";
 import {
   Card,
   CardContent,
@@ -19,7 +23,12 @@ import {
 } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { EmptyState } from "@/components/ui/misc";
-import type { Client, Invoice, PaymentWithRelations } from "@/lib/types";
+import type {
+  Client,
+  Invoice,
+  PaymentMethod,
+  PaymentWithRelations,
+} from "@/lib/types";
 import {
   effectiveStatus,
   formatCurrency,
@@ -32,12 +41,20 @@ export function ClientDetail({
   invoices,
   payments,
   currency,
+  clients,
+  paymentMethods,
+  projectTypeRates,
 }: {
   client: Client;
   invoices: Invoice[];
   payments: PaymentWithRelations[];
   currency: string;
+  clients: Client[];
+  paymentMethods: PaymentMethod[];
+  projectTypeRates: Record<string, number>;
 }) {
+  const [invoiceOpen, setInvoiceOpen] = useState(false);
+
   const totalPaid = payments.reduce((s, p) => s + Number(p.amount), 0);
   const outstanding = invoices
     .filter((i) => isOutstanding(i))
@@ -66,6 +83,10 @@ export function ClientDetail({
             {client.email}
           </a>
         )}
+        <Button onClick={() => setInvoiceOpen(true)}>
+          <FilePlus className="h-4 w-4" />
+          New invoice
+        </Button>
       </PageHeader>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -97,6 +118,15 @@ export function ClientDetail({
         <InvoicesSection invoices={invoices} currency={currency} />
         <PaymentsSection payments={payments} currency={currency} />
       </div>
+
+      <InvoiceFormModal
+        open={invoiceOpen}
+        onClose={() => setInvoiceOpen(false)}
+        clients={clients}
+        defaultClientId={client.id}
+        paymentMethods={paymentMethods}
+        projectTypeRates={projectTypeRates}
+      />
     </div>
   );
 }

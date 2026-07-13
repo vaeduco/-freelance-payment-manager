@@ -5,7 +5,16 @@ import type {
   MonthlyIncomePoint,
   Payment,
 } from "@/lib/types";
-import { effectiveStatus, lastNMonths, monthKey, todayISO } from "@/lib/utils";
+import {
+  daysBetween,
+  effectiveStatus,
+  lastNMonths,
+  monthKey,
+  todayISO,
+} from "@/lib/utils";
+import { NO_CONTACT_DAYS } from "@/lib/constants";
+import { getClientsWithStats } from "@/lib/data/clients";
+import { getInvoicesWithClients } from "@/lib/data/invoices";
 
 export interface RecentActivityItem {
   id: string;
@@ -131,4 +140,73 @@ export async function getDashboardData(): Promise<DashboardData> {
     .slice(0, 8);
 
   return { stats, monthly, activity };
+}
+
+// ---------------------------------------------------------------------------
+// "Needs attention" widget — derived entirely from existing client/invoice data
+// ---------------------------------------------------------------------------
+
+export interface AttentionOverdueItem {
+  invoiceId: string;
+  clientId: string | null;
+  clientName: string;
+  service: string;
+  amount: number;
+  dueDate: string;
+  daysOverdue: number;
+}
+
+export interface AttentionStaleItem {
+  clientId: string;
+  clientName: string;
+  company: string | null;
+  lastActivity: string;
+  daysSince: number;
+}
+
+export interface NeedsAttentionData {
+  overdue: AttentionOverdueItem[];
+  stale: AttentionStaleItem[];
+}
+
+export async function getNeedsAttention(): Promise<NeedsAttentionData> {
+  const [clients, invoices] = await Promise.all([
+    getClientsWithStats(),
+    getInvoicesWithClients(),
+  ]);
+
+  const archived = new Set(
+    clients.filter((c) => c.is_archived).map((c) => c.id),
+  );
+  const today = todayISO();
+
+  const overdue: AttentionOverdueItem[] = invoices
+    .filter((i) => effectiveStatus(i) === "overdue")
+    .filter((i) => !(i.client_id && archived.has(i.client_id)))
+    .map((i) => ({
+      invoiceId: i.id,
+      clientId: i.client_id,
+      clientName: i.client?.name ?? "No client",
+      service: i.service_description,
+      amount: Number(i.amount),
+      dueDate: i.due_date,
+      daysOverdue: daysBetween(i.due_date, today),
+    }))
+    .sort((a, b) => b.daysOverdue - a.daysOverdue)
+    .slice(0, 6);
+
+  const stale: AttentionStaleItem[] = clients
+    .filter((c) => !c.is_archived)
+    .map((c) => ({
+      clientId: c.id,
+      clientName: c.name,
+      company: c.company,
+      lastActivity: c.last_activity,
+      daysSince: daysBetween(c.last_activity, today),
+    }))
+    .filter((c) => c.daysSince >= NO_CONTACT_DAYS)
+    .sort((a, b) => b.daysSince - a.daysSince)
+    .slice(0, 6);
+
+  return { overdue, stale };
 }

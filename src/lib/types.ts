@@ -20,6 +20,7 @@ export interface Client {
   company: string | null;
   notes: string | null;
   is_flagged: boolean;
+  is_archived: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -93,6 +94,8 @@ export interface ClientWithStats extends Client {
   outstanding: number;
   last_payment_date: string | null;
   avg_days_to_pay: number | null;
+  /** Most recent invoice/payment date (falls back to creation) — YYYY-MM-DD. */
+  last_activity: string;
 }
 
 export interface DashboardStats {
