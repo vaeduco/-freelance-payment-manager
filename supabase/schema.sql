@@ -207,10 +207,15 @@ create table if not exists public.payment_methods (
   name text not null,
   account_name text,
   details text,
+  payment_link text,
   is_default boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+-- Optional pay link/number (added in migration 0004; here for fresh installs).
+alter table public.payment_methods
+  add column if not exists payment_link text;
 
 create index if not exists idx_payment_methods_user
   on public.payment_methods (user_id);

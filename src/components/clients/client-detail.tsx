@@ -23,9 +23,10 @@ import {
 } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { EmptyState } from "@/components/ui/misc";
+import { PayViaButton } from "@/components/payments/pay-via-button";
 import type {
   Client,
-  Invoice,
+  InvoiceWithClient,
   PaymentMethod,
   PaymentWithRelations,
 } from "@/lib/types";
@@ -46,7 +47,7 @@ export function ClientDetail({
   projectTypeRates,
 }: {
   client: Client;
-  invoices: Invoice[];
+  invoices: InvoiceWithClient[];
   payments: PaymentWithRelations[];
   currency: string;
   clients: Client[];
@@ -135,7 +136,7 @@ function InvoicesSection({
   invoices,
   currency,
 }: {
-  invoices: Invoice[];
+  invoices: InvoiceWithClient[];
   currency: string;
 }) {
   return (
@@ -168,6 +169,7 @@ function InvoicesSection({
                     <tr key={inv.id}>
                       <td className="py-3 pr-3 font-medium text-foreground">
                         {inv.service_description}
+                        <PayViaButton invoice={inv} className="mt-0.5" />
                       </td>
                       <td className="py-3 pr-3 text-muted-foreground">
                         {formatDate(inv.due_date)}
@@ -205,6 +207,7 @@ function InvoicesSection({
                       {formatCurrency(Number(inv.amount), currency)}
                     </span>
                   </div>
+                  <PayViaButton invoice={inv} className="mt-1.5" />
                 </li>
               ))}
             </ul>

@@ -31,6 +31,8 @@ export interface PaymentMethod {
   name: string;
   account_name: string | null;
   details: string | null;
+  /** Optional pay link/number: PayPal.me URL, Wise link, GCash number, … */
+  payment_link: string | null;
   is_default: boolean;
   created_at: string;
   updated_at: string;
@@ -39,7 +41,7 @@ export interface PaymentMethod {
 /** Embedded (joined) payment-method shape returned by queries. */
 export type PaymentMethodRef = Pick<
   PaymentMethod,
-  "id" | "name" | "account_name" | "details"
+  "id" | "name" | "account_name" | "details" | "payment_link"
 >;
 
 export interface Invoice {

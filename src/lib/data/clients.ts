@@ -3,6 +3,7 @@ import type {
   Client,
   ClientWithStats,
   Invoice,
+  InvoiceWithClient,
   Payment,
   PaymentWithRelations,
 } from "@/lib/types";
@@ -47,26 +48,28 @@ export async function getClientsWithStats(): Promise<ClientWithStats[]> {
 
 /** Payment + invoice history for a single client's detail view. */
 export async function getClientHistory(clientId: string): Promise<{
-  invoices: Invoice[];
+  invoices: InvoiceWithClient[];
   payments: PaymentWithRelations[];
 }> {
   const supabase = await createClient();
   const [{ data: invoices }, { data: payments }] = await Promise.all([
     supabase
       .from("invoices")
-      .select("*")
+      .select(
+        "*, client:clients(id, name, company), payment_method:payment_methods(id, name, account_name, details, payment_link)",
+      )
       .eq("client_id", clientId)
       .order("issue_date", { ascending: false }),
     supabase
       .from("payments")
       .select(
-        "*, client:clients(id, name), invoice:invoices(id, service_description), payment_method:payment_methods(id, name, account_name, details)",
+        "*, client:clients(id, name), invoice:invoices(id, service_description), payment_method:payment_methods(id, name, account_name, details, payment_link)",
       )
       .eq("client_id", clientId)
       .order("payment_date", { ascending: false }),
   ]);
   return {
-    invoices: (invoices ?? []) as Invoice[],
+    invoices: (invoices ?? []) as unknown as InvoiceWithClient[],
     payments: (payments ?? []) as unknown as PaymentWithRelations[],
   };
 }

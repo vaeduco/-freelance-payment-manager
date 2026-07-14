@@ -21,6 +21,7 @@ import { EmptyState } from "@/components/ui/misc";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useToast } from "@/components/ui/toast";
 import { InvoiceFormModal } from "@/components/invoices/invoice-form-modal";
+import { PayViaButton } from "@/components/payments/pay-via-button";
 import { deleteInvoice, markInvoicePaid } from "@/lib/actions/invoices";
 import { INVOICE_STATUSES, STATUS_META } from "@/lib/constants";
 import { cn, effectiveStatus, formatCurrency, formatDate } from "@/lib/utils";
@@ -274,11 +275,7 @@ export function InvoicesClient({
                           <span className="line-clamp-1 text-muted-foreground">
                             {inv.service_description}
                           </span>
-                          {inv.payment_method && (
-                            <span className="mt-0.5 block text-xs text-muted-foreground/80">
-                              Pay via {inv.payment_method.name}
-                            </span>
-                          )}
+                          <PayViaButton invoice={inv} className="mt-0.5" />
                         </td>
                         <td className="px-5 py-3.5 text-right align-middle font-medium tabular-nums">
                           {formatCurrency(inv.amount, currency)}
@@ -360,11 +357,7 @@ export function InvoicesClient({
                   <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">
                     {inv.service_description}
                   </p>
-                  {inv.payment_method && (
-                    <p className="mt-0.5 text-xs text-muted-foreground/80">
-                      Pay via {inv.payment_method.name}
-                    </p>
-                  )}
+                  <PayViaButton invoice={inv} className="mt-1" />
 
                   <div className="mt-3 flex items-end justify-between gap-3">
                     <div>

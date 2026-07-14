@@ -2,7 +2,16 @@
 
 import { useId, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, CreditCard, Pencil, Plus, Star, Trash2, Wallet } from "lucide-react";
+import {
+  Check,
+  CreditCard,
+  Link2,
+  Pencil,
+  Plus,
+  Star,
+  Trash2,
+  Wallet,
+} from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -22,6 +31,7 @@ import {
   type PaymentMethodInput,
 } from "@/lib/actions/payment-methods";
 import { PAYMENT_METHOD_SUGGESTIONS } from "@/lib/constants";
+import { payLinkHref } from "@/components/payments/pay-via-button";
 import type { PaymentMethod } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -152,6 +162,7 @@ function MethodCard({
               {method.details}
             </p>
           )}
+          {method.payment_link && <MethodLink link={method.payment_link} />}
         </div>
       </div>
 
@@ -203,6 +214,28 @@ function MethodCard({
   );
 }
 
+/** Renders a method's pay link as a clickable link (URL) or plain text (number). */
+function MethodLink({ link }: { link: string }) {
+  const href = payLinkHref(link);
+  return (
+    <p className="flex items-center gap-1.5 text-sm">
+      <Link2 className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
+      {href ? (
+        <a
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="truncate font-medium text-primary hover:underline"
+        >
+          {link}
+        </a>
+      ) : (
+        <span className="truncate text-muted-foreground">{link}</span>
+      )}
+    </p>
+  );
+}
+
 function PaymentMethodFormModal({
   open,
   onClose,
@@ -220,6 +253,7 @@ function PaymentMethodFormModal({
   const [name, setName] = useState(method?.name ?? "");
   const [accountName, setAccountName] = useState(method?.account_name ?? "");
   const [details, setDetails] = useState(method?.details ?? "");
+  const [paymentLink, setPaymentLink] = useState(method?.payment_link ?? "");
   const [isDefault, setIsDefault] = useState(method?.is_default ?? false);
   const [loading, setLoading] = useState(false);
 
@@ -231,6 +265,7 @@ function PaymentMethodFormModal({
     setName(method?.name ?? "");
     setAccountName(method?.account_name ?? "");
     setDetails(method?.details ?? "");
+    setPaymentLink(method?.payment_link ?? "");
     setIsDefault(method?.is_default ?? false);
   } else if (!open && prevOpen) {
     setPrevOpen(false);
@@ -244,6 +279,7 @@ function PaymentMethodFormModal({
       name: name.trim(),
       account_name: accountName.trim() || null,
       details: details.trim() || null,
+      payment_link: paymentLink.trim() || null,
       is_default: isDefault,
     };
 
@@ -311,6 +347,25 @@ function PaymentMethodFormModal({
             placeholder="Account number, email, or wallet address"
             rows={2}
           />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="pm-link">
+            Payment link{" "}
+            <span className="font-normal text-muted-foreground">(optional)</span>
+          </Label>
+          <Input
+            id="pm-link"
+            value={paymentLink}
+            onChange={(e) => setPaymentLink(e.target.value)}
+            placeholder="https://paypal.me/you or 0917 123 4567"
+            autoComplete="off"
+            inputMode="url"
+          />
+          <p className="text-xs text-muted-foreground">
+            Shown as a “Pay via” button on sent &amp; overdue invoices. Links
+            open in a new tab; numbers appear as-is.
+          </p>
         </div>
 
         <button

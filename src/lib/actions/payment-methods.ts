@@ -8,6 +8,7 @@ export interface PaymentMethodInput {
   name: string;
   account_name: string | null;
   details: string | null;
+  payment_link: string | null;
   is_default: boolean;
 }
 
@@ -45,6 +46,7 @@ export async function createPaymentMethod(
       name: input.name.trim(),
       account_name: input.account_name?.trim() || null,
       details: input.details?.trim() || null,
+      payment_link: input.payment_link?.trim() || null,
       is_default: input.is_default,
     });
     if (error) throw error;
@@ -77,6 +79,7 @@ export async function updatePaymentMethod(
         name: input.name.trim(),
         account_name: input.account_name?.trim() || null,
         details: input.details?.trim() || null,
+        payment_link: input.payment_link?.trim() || null,
         is_default: input.is_default,
       })
       .eq("id", id);

@@ -8,7 +8,7 @@ export async function getPaymentsWithRelations(): Promise<
   const { data, error } = await supabase
     .from("payments")
     .select(
-      "*, client:clients(id, name), invoice:invoices(id, service_description), payment_method:payment_methods(id, name, account_name, details)",
+      "*, client:clients(id, name), invoice:invoices(id, service_description), payment_method:payment_methods(id, name, account_name, details, payment_link)",
     )
     .order("payment_date", { ascending: false })
     .order("created_at", { ascending: false });
