@@ -45,6 +45,7 @@ export function ClientDetail({
   clients,
   paymentMethods,
   projectTypeRates,
+  paymentTermsDays,
 }: {
   client: Client;
   invoices: InvoiceWithClient[];
@@ -53,6 +54,7 @@ export function ClientDetail({
   clients: Client[];
   paymentMethods: PaymentMethod[];
   projectTypeRates: Record<string, number>;
+  paymentTermsDays: number;
 }) {
   const [invoiceOpen, setInvoiceOpen] = useState(false);
 
@@ -127,6 +129,7 @@ export function ClientDetail({
         defaultClientId={client.id}
         paymentMethods={paymentMethods}
         projectTypeRates={projectTypeRates}
+        paymentTermsDays={paymentTermsDays}
       />
     </div>
   );

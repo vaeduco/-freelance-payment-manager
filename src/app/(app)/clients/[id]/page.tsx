@@ -41,6 +41,7 @@ export default async function ClientDetailPage({
       clients={clients}
       paymentMethods={paymentMethods}
       projectTypeRates={hourlyRatesByProjectType(allInvoices)}
+      paymentTermsDays={profile?.payment_terms_days ?? 14}
     />
   );
 }

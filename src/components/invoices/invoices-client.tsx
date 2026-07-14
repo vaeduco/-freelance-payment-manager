@@ -1,9 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Check,
+  Eye,
   FilePlus,
   FileText,
   Pencil,
@@ -42,12 +44,14 @@ export function InvoicesClient({
   currency,
   paymentMethods,
   projectTypeRates,
+  paymentTermsDays,
 }: {
   invoices: InvoiceWithClient[];
   clients: Client[];
   currency: string;
   paymentMethods: PaymentMethod[];
   projectTypeRates: Record<string, number>;
+  paymentTermsDays: number;
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -306,6 +310,14 @@ export function InvoicesClient({
                                 Mark paid
                               </Button>
                             )}
+                            <Link
+                              href={`/invoices/${inv.id}`}
+                              aria-label="View invoice"
+                              title="View invoice"
+                              className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-foreground transition-colors hover:bg-secondary"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Link>
                             <Button
                               size="icon"
                               variant="ghost"
@@ -390,10 +402,18 @@ export function InvoicesClient({
                         Mark paid
                       </Button>
                     )}
+                    <Link
+                      href={`/invoices/${inv.id}`}
+                      aria-label="View invoice"
+                      title="View invoice"
+                      className="inline-flex h-8 items-center justify-center gap-1.5 rounded-md border border-border px-3 text-xs font-medium text-foreground transition-colors hover:bg-secondary"
+                    >
+                      <Eye className="h-3.5 w-3.5" />
+                      View
+                    </Link>
                     <Button
                       size="sm"
                       variant="outline"
-                      className={cn(status === "paid" && "flex-1")}
                       onClick={() => setEditing(inv)}
                     >
                       <Pencil className="h-3.5 w-3.5" />
@@ -423,6 +443,7 @@ export function InvoicesClient({
         clients={clients}
         paymentMethods={paymentMethods}
         projectTypeRates={projectTypeRates}
+        paymentTermsDays={paymentTermsDays}
       />
 
       {/* Edit modal */}
@@ -433,6 +454,7 @@ export function InvoicesClient({
         invoice={editing}
         paymentMethods={paymentMethods}
         projectTypeRates={projectTypeRates}
+        paymentTermsDays={paymentTermsDays}
       />
 
       {/* Delete confirmation */}

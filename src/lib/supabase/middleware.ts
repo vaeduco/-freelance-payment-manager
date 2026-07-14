@@ -3,7 +3,18 @@ import { NextResponse, type NextRequest } from "next/server";
 
 type CookieToSet = { name: string; value: string; options: CookieOptions };
 
-const PUBLIC_PATHS = ["/login", "/signup", "/auth", "/forgot-password"];
+const PUBLIC_PATHS = [
+  "/login",
+  "/signup",
+  "/auth",
+  "/forgot-password",
+  // Public so a just-issued recovery session can render it (NOT an authRoute,
+  // or a signed-in recovery user would be bounced to /dashboard first).
+  "/reset-password",
+  // Static legal pages — reachable without an account.
+  "/terms",
+  "/privacy",
+];
 
 function isPublic(pathname: string) {
   if (pathname === "/") return true;

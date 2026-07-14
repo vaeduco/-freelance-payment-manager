@@ -33,6 +33,7 @@ export function InvoiceFormModal({
   defaultClientId,
   paymentMethods = [],
   projectTypeRates = {},
+  paymentTermsDays = 14,
 }: {
   open: boolean;
   onClose: () => void;
@@ -42,6 +43,8 @@ export function InvoiceFormModal({
   paymentMethods?: PaymentMethod[];
   /** project_type (lowercased) -> last hourly rate used, for prefill. */
   projectTypeRates?: Record<string, number>;
+  /** User's default payment terms in days — sets a new invoice's due date. */
+  paymentTermsDays?: number;
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -63,7 +66,7 @@ export function InvoiceFormModal({
   );
   const [issueDate, setIssueDate] = useState(invoice?.issue_date ?? today);
   const [dueDate, setDueDate] = useState(
-    invoice?.due_date ?? addDays(today, 14),
+    invoice?.due_date ?? addDays(today, paymentTermsDays),
   );
   const [projectType, setProjectType] = useState(invoice?.project_type ?? "");
   const [paymentMethodId, setPaymentMethodId] = useState(
@@ -96,7 +99,7 @@ export function InvoiceFormModal({
           : "draft",
     );
     setIssueDate(invoice?.issue_date ?? today);
-    setDueDate(invoice?.due_date ?? addDays(today, 14));
+    setDueDate(invoice?.due_date ?? addDays(today, paymentTermsDays));
     setProjectType(invoice?.project_type ?? "");
     setPaymentMethodId(invoice ? (invoice.payment_method_id ?? "") : defaultMethodId);
     setRateType(invoice?.rate_type ?? "fixed");

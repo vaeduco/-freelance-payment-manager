@@ -64,3 +64,41 @@ export async function signOut(): Promise<void> {
   const supabase = await createClient();
   await supabase.auth.signOut();
 }
+
+/**
+ * Send a password-reset email. The link routes through /auth/callback, which
+ * establishes a recovery session and forwards to /reset-password.
+ * We intentionally return { ok: true } for missing accounts too (no user
+ * enumeration); only genuine errors (e.g. rate limiting) surface.
+ */
+export async function requestPasswordReset(email: string): Promise<AuthResult> {
+  try {
+    const supabase = await createClient();
+    const origin = await siteOrigin();
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: `${origin}/auth/callback?next=/reset-password`,
+    });
+    if (error && /rate|too many/i.test(error.message)) {
+      return { error: error.message };
+    }
+    return { ok: true };
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+}
+
+/**
+ * Set a new password for the currently-authenticated (recovery) session.
+ * The recovery session cookies are set by /auth/callback before the user
+ * reaches /reset-password, and are readable/writable from this server action.
+ */
+export async function updatePassword(newPassword: string): Promise<AuthResult> {
+  try {
+    const supabase = await createClient();
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) return { error: error.message };
+    return { ok: true };
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+}

@@ -137,6 +137,16 @@ export function AuthForm({
             {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
           </button>
         </div>
+        {!isSignup && (
+          <div className="text-right">
+            <Link
+              href="/forgot-password"
+              className="text-sm font-medium text-[#185fa5] hover:underline dark:text-[#5aa2e0]"
+            >
+              Forgot password?
+            </Link>
+          </div>
+        )}
       </div>
 
       {error && (
@@ -163,6 +173,18 @@ export function AuthForm({
         >
           {isSignup ? "Sign in" : "Create an account"}
         </Link>
+      </p>
+
+      <p className="text-center text-xs text-muted-foreground">
+        By continuing, you agree to our{" "}
+        <Link href="/terms" className="underline hover:text-foreground">
+          Terms
+        </Link>{" "}
+        and{" "}
+        <Link href="/privacy" className="underline hover:text-foreground">
+          Privacy Policy
+        </Link>
+        .
       </p>
     </form>
   );

@@ -14,11 +14,23 @@ create extension if not exists "pgcrypto";
 create table if not exists public.profiles (
   id uuid primary key references auth.users (id) on delete cascade,
   full_name text,
+  business_name text,
+  logo_path text,                       -- storage object KEY in the `logos` bucket, never a URL
   tax_rate numeric(5, 2) not null default 25 check (tax_rate >= 0 and tax_rate <= 100),
   currency text not null default 'USD',
+  payment_terms_days integer not null default 14 check (payment_terms_days >= 0),
+  onboarded_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+-- Branding / onboarding columns (added in migration 0005; here for fresh installs).
+alter table public.profiles
+  add column if not exists business_name text,
+  add column if not exists logo_path text,
+  add column if not exists payment_terms_days integer not null default 14
+    check (payment_terms_days >= 0),
+  add column if not exists onboarded_at timestamptz;
 
 create table if not exists public.clients (
   id uuid primary key default gen_random_uuid(),
@@ -134,69 +146,107 @@ alter table public.clients  enable row level security;
 alter table public.invoices enable row level security;
 alter table public.payments enable row level security;
 
--- profiles ---------------------------------------------------------------
+-- NOTE: all policies are scoped `to authenticated` and use `(select auth.uid())`
+-- (evaluated once per query, not per row) — hardened in migration 0005.
+
+-- profiles (scoped by id) ------------------------------------------------
 drop policy if exists profiles_select_own on public.profiles;
 create policy profiles_select_own on public.profiles
-  for select using (auth.uid() = id);
+  for select to authenticated using ((select auth.uid()) = id);
 
 drop policy if exists profiles_insert_own on public.profiles;
 create policy profiles_insert_own on public.profiles
-  for insert with check (auth.uid() = id);
+  for insert to authenticated with check ((select auth.uid()) = id);
 
 drop policy if exists profiles_update_own on public.profiles;
 create policy profiles_update_own on public.profiles
-  for update using (auth.uid() = id) with check (auth.uid() = id);
+  for update to authenticated
+  using ((select auth.uid()) = id) with check ((select auth.uid()) = id);
 
 -- clients ----------------------------------------------------------------
 drop policy if exists clients_select_own on public.clients;
 create policy clients_select_own on public.clients
-  for select using (auth.uid() = user_id);
+  for select to authenticated using ((select auth.uid()) = user_id);
 
 drop policy if exists clients_insert_own on public.clients;
 create policy clients_insert_own on public.clients
-  for insert with check (auth.uid() = user_id);
+  for insert to authenticated with check ((select auth.uid()) = user_id);
 
 drop policy if exists clients_update_own on public.clients;
 create policy clients_update_own on public.clients
-  for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+  for update to authenticated
+  using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
 
 drop policy if exists clients_delete_own on public.clients;
 create policy clients_delete_own on public.clients
-  for delete using (auth.uid() = user_id);
+  for delete to authenticated using ((select auth.uid()) = user_id);
 
 -- invoices ---------------------------------------------------------------
 drop policy if exists invoices_select_own on public.invoices;
 create policy invoices_select_own on public.invoices
-  for select using (auth.uid() = user_id);
+  for select to authenticated using ((select auth.uid()) = user_id);
 
 drop policy if exists invoices_insert_own on public.invoices;
 create policy invoices_insert_own on public.invoices
-  for insert with check (auth.uid() = user_id);
+  for insert to authenticated with check ((select auth.uid()) = user_id);
 
 drop policy if exists invoices_update_own on public.invoices;
 create policy invoices_update_own on public.invoices
-  for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+  for update to authenticated
+  using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
 
 drop policy if exists invoices_delete_own on public.invoices;
 create policy invoices_delete_own on public.invoices
-  for delete using (auth.uid() = user_id);
+  for delete to authenticated using ((select auth.uid()) = user_id);
 
 -- payments ---------------------------------------------------------------
 drop policy if exists payments_select_own on public.payments;
 create policy payments_select_own on public.payments
-  for select using (auth.uid() = user_id);
+  for select to authenticated using ((select auth.uid()) = user_id);
 
 drop policy if exists payments_insert_own on public.payments;
 create policy payments_insert_own on public.payments
-  for insert with check (auth.uid() = user_id);
+  for insert to authenticated with check ((select auth.uid()) = user_id);
 
 drop policy if exists payments_update_own on public.payments;
 create policy payments_update_own on public.payments
-  for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+  for update to authenticated
+  using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
 
 drop policy if exists payments_delete_own on public.payments;
 create policy payments_delete_own on public.payments
-  for delete using (auth.uid() = user_id);
+  for delete to authenticated using ((select auth.uid()) = user_id);
+
+-- invoices/payments: client_id must belong to the same owner (defense-in-depth).
+create or replace function public.enforce_client_ownership()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if new.client_id is not null
+     and not exists (
+       select 1 from public.clients c
+       where c.id = new.client_id
+         and c.user_id = new.user_id
+     ) then
+    raise exception 'client_id % does not belong to the row owner', new.client_id
+      using errcode = 'check_violation';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_invoices_client_owner on public.invoices;
+create trigger trg_invoices_client_owner
+  before insert or update of client_id, user_id on public.invoices
+  for each row execute function public.enforce_client_ownership();
+
+drop trigger if exists trg_payments_client_owner on public.payments;
+create trigger trg_payments_client_owner
+  before insert or update of client_id, user_id on public.payments
+  for each row execute function public.enforce_client_ownership();
 
 -- -----------------------------------------------------------------------------
 -- Payment methods (how clients pay you) + links from invoices/payments
@@ -241,18 +291,28 @@ alter table public.payment_methods enable row level security;
 
 drop policy if exists payment_methods_select_own on public.payment_methods;
 create policy payment_methods_select_own on public.payment_methods
-  for select using (auth.uid() = user_id);
+  for select to authenticated using ((select auth.uid()) = user_id);
 drop policy if exists payment_methods_insert_own on public.payment_methods;
 create policy payment_methods_insert_own on public.payment_methods
-  for insert with check (auth.uid() = user_id);
+  for insert to authenticated with check ((select auth.uid()) = user_id);
 drop policy if exists payment_methods_update_own on public.payment_methods;
 create policy payment_methods_update_own on public.payment_methods
-  for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+  for update to authenticated
+  using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
 drop policy if exists payment_methods_delete_own on public.payment_methods;
 create policy payment_methods_delete_own on public.payment_methods
-  for delete using (auth.uid() = user_id);
+  for delete to authenticated using ((select auth.uid()) = user_id);
+
+-- -----------------------------------------------------------------------------
+-- Storage: PRIVATE `logos` bucket + per-user object policies.
+-- NOT included inline here: `create policy on storage.objects` can fail with
+-- "must be owner of table objects", which would roll back this whole script.
+-- Set storage up separately via supabase/migrations/0005b_logos_storage.sql
+-- (create the bucket in the Storage UI, then add the 4 policies).
+-- -----------------------------------------------------------------------------
 
 -- =============================================================================
 -- Done. Tables: profiles, clients, invoices, payments, payment_methods
--- (all RLS-protected).
+-- (all RLS-protected, scoped TO authenticated). Client-owner trigger on
+-- invoices + payments. Logo storage: see 0005b_logos_storage.sql.
 -- =============================================================================

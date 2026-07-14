@@ -8,7 +8,14 @@ import { createClient } from "@/lib/supabase/server";
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/dashboard";
+  const rawNext = searchParams.get("next") ?? "/dashboard";
+  // Only follow same-origin relative paths (prevents an open redirect).
+  const next =
+    rawNext.startsWith("/") &&
+    !rawNext.startsWith("//") &&
+    !rawNext.startsWith("/\\")
+      ? rawNext
+      : "/dashboard";
 
   if (code) {
     const supabase = await createClient();
@@ -18,7 +25,13 @@ export async function GET(request: Request) {
     }
   }
 
+  // Tailor the failure message: a bad recovery link isn't an email-verify issue.
+  const message =
+    next === "/reset-password"
+      ? "This password reset link is invalid or has expired. Please request a new one."
+      : "Could not verify your email. Please try signing in.";
+  const dest = next === "/reset-password" ? "/forgot-password" : "/login";
   return NextResponse.redirect(
-    `${origin}/login?error=${encodeURIComponent("Could not verify your email. Please try signing in.")}`,
+    `${origin}${dest}?error=${encodeURIComponent(message)}`,
   );
 }

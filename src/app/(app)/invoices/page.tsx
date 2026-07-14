@@ -25,6 +25,7 @@ export default async function InvoicesPage() {
       currency={profile?.currency ?? "USD"}
       paymentMethods={paymentMethods}
       projectTypeRates={hourlyRatesByProjectType(invoices)}
+      paymentTermsDays={profile?.payment_terms_days ?? 14}
     />
   );
 }

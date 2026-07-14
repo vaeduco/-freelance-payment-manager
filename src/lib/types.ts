@@ -6,8 +6,16 @@ export type StoredInvoiceStatus = "draft" | "sent" | "paid" | "overdue";
 export interface Profile {
   id: string;
   full_name: string | null;
+  /** Business/brand name shown on invoices (distinct from the personal full_name). */
+  business_name: string | null;
+  /** Storage object key in the private `logos` bucket (e.g. `<uid>/logo`), never a URL. */
+  logo_path: string | null;
   tax_rate: number;
   currency: string;
+  /** Default number of days added to today for a new invoice's due date. */
+  payment_terms_days: number;
+  /** Set once the user finishes (or skips) first-time onboarding. */
+  onboarded_at: string | null;
   created_at: string;
   updated_at: string;
 }
