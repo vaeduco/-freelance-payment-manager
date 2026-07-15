@@ -69,12 +69,44 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Signed in but visiting an auth page -> send to dashboard.
-  if (user && authRoute) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/dashboard";
-    url.search = "";
-    return NextResponse.redirect(url);
+  if (user) {
+    // Enforce 2FA server-side: a user with a verified factor must step up to
+    // aal2 before reaching anything except the challenge page. This is the real
+    // gate — a client-side check in the login form cannot be trusted.
+    let needsMfa = false;
+    try {
+      const { data: aal } =
+        await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+      needsMfa =
+        !!aal && aal.currentLevel !== "aal2" && aal.nextLevel === "aal2";
+    } catch {
+      // Fail secure: if the check errors, still require step-up when a
+      // verified factor exists.
+      needsMfa = (user.factors ?? []).some((f) => f.status === "verified");
+    }
+
+    const onMfa = pathname === "/mfa";
+    const onAuth = pathname === "/auth" || pathname.startsWith("/auth/");
+
+    if (needsMfa) {
+      // Until the second factor is completed, only the challenge page and the
+      // auth callback are reachable.
+      if (!onMfa && !onAuth) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/mfa";
+        url.search = "";
+        return NextResponse.redirect(url);
+      }
+      return supabaseResponse;
+    }
+
+    // Fully authenticated -> keep them off the challenge page and auth pages.
+    if (onMfa || authRoute) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/dashboard";
+      url.search = "";
+      return NextResponse.redirect(url);
+    }
   }
 
   return supabaseResponse;

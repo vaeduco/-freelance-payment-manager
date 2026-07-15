@@ -7,6 +7,7 @@ import { updatePassword } from "@/lib/actions/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordStrengthMeter } from "@/components/security/password-strength-meter";
 
 export function ResetPasswordForm() {
   const router = useRouter();
@@ -62,6 +63,7 @@ export function ResetPasswordForm() {
             {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
           </button>
         </div>
+        <PasswordStrengthMeter password={password} />
       </div>
 
       <div className="space-y-1.5">

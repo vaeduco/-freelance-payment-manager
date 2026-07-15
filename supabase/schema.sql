@@ -20,6 +20,7 @@ create table if not exists public.profiles (
   currency text not null default 'USD',
   payment_terms_days integer not null default 14 check (payment_terms_days >= 0),
   onboarded_at timestamptz,
+  password_checked_at timestamptz,      -- last clean HIBP breach check (0007a)
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -30,7 +31,8 @@ alter table public.profiles
   add column if not exists logo_path text,
   add column if not exists payment_terms_days integer not null default 14
     check (payment_terms_days >= 0),
-  add column if not exists onboarded_at timestamptz;
+  add column if not exists onboarded_at timestamptz,
+  add column if not exists password_checked_at timestamptz;
 
 create table if not exists public.clients (
   id uuid primary key default gen_random_uuid(),

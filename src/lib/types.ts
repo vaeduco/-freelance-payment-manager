@@ -16,6 +16,8 @@ export interface Profile {
   payment_terms_days: number;
   /** Set once the user finishes (or skips) first-time onboarding. */
   onboarded_at: string | null;
+  /** Last time the password was checked against HIBP and came back clean. */
+  password_checked_at: string | null;
   created_at: string;
   updated_at: string;
 }

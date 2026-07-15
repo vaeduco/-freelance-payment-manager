@@ -8,6 +8,7 @@ import { signIn, signUp } from "@/lib/actions/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordStrengthMeter } from "@/components/security/password-strength-meter";
 
 export function AuthForm({
   mode,
@@ -28,6 +29,21 @@ export function AuthForm({
   const [confirmSent, setConfirmSent] = useState(false);
 
   const isSignup = mode === "signup";
+
+  // Only follow same-origin relative paths to prevent open redirects.
+  function destPath() {
+    return redirectedFrom &&
+      redirectedFrom.startsWith("/") &&
+      !redirectedFrom.startsWith("//") &&
+      !redirectedFrom.startsWith("/\\")
+      ? redirectedFrom
+      : "/dashboard";
+  }
+
+  function finish() {
+    router.push(destPath());
+    router.refresh();
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -50,17 +66,10 @@ export function AuthForm({
           setError(res.error);
           return;
         }
+        // 2FA is enforced server-side by the middleware: if this account has a
+        // verified factor, the next navigation is redirected to /mfa to step up.
       }
-      // Only follow same-origin relative paths to prevent open redirects.
-      const dest =
-        redirectedFrom &&
-        redirectedFrom.startsWith("/") &&
-        !redirectedFrom.startsWith("//") &&
-        !redirectedFrom.startsWith("/\\")
-          ? redirectedFrom
-          : "/dashboard";
-      router.push(dest);
-      router.refresh();
+      finish();
     } finally {
       setLoading(false);
     }
@@ -147,6 +156,7 @@ export function AuthForm({
             </Link>
           </div>
         )}
+        {isSignup && <PasswordStrengthMeter password={password} />}
       </div>
 
       {error && (
