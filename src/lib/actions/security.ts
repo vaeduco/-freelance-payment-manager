@@ -3,8 +3,31 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/auth";
+import { logEvent } from "@/lib/security/log";
 
 type ActionResult = { ok: true } | { error: string };
+
+/** Record a security-category activity event (used by client-driven flows like 2FA). */
+export async function logSecurityActivity(
+  action: string,
+  summary: string,
+  isAlert = true,
+): Promise<ActionResult> {
+  try {
+    const user = await requireUser();
+    const supabase = await createClient();
+    await logEvent(supabase, user.id, {
+      category: "security",
+      action,
+      summary,
+      isAlert,
+    });
+    revalidatePath("/settings/security");
+    return { ok: true };
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+}
 
 /**
  * Proxy for the Have I Been Pwned "range" (k-anonymity) API. The client hashes
@@ -46,13 +69,55 @@ export async function markPasswordChecked(): Promise<ActionResult> {
   }
 }
 
-/** Sign out every OTHER device/session, keeping the current one. */
-export async function signOutOtherDevices(): Promise<ActionResult> {
+/** Record a data/report export in the activity log (also raised as an alert). */
+export async function logReportExport(kind: string): Promise<ActionResult> {
+  try {
+    const user = await requireUser();
+    const supabase = await createClient();
+    await logEvent(supabase, user.id, {
+      category: "report",
+      action: "report.export",
+      summary: `Exported ${kind}`,
+      isAlert: true,
+    });
+    revalidatePath("/settings/security");
+    return { ok: true };
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+}
+
+/** Mark all of the user's unread security alerts as read. */
+export async function markAllAlertsRead(): Promise<ActionResult> {
   try {
     await requireUser();
     const supabase = await createClient();
+    const { error } = await supabase
+      .from("security_events")
+      .update({ read_at: new Date().toISOString() })
+      .eq("is_alert", true)
+      .is("read_at", null);
+    if (error) throw error;
+    revalidatePath("/settings/security");
+    return { ok: true };
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+}
+
+/** Sign out every OTHER device/session, keeping the current one. */
+export async function signOutOtherDevices(): Promise<ActionResult> {
+  try {
+    const user = await requireUser();
+    const supabase = await createClient();
     const { error } = await supabase.auth.signOut({ scope: "others" });
     if (error) throw error;
+    await logEvent(supabase, user.id, {
+      category: "security",
+      action: "signout_others",
+      summary: "Signed out all other devices",
+      isAlert: true,
+    });
     revalidatePath("/settings/security");
     return { ok: true };
   } catch (e) {

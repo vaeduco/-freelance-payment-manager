@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/auth";
 import { todayISO } from "@/lib/utils";
+import { logEvent } from "@/lib/security/log";
 import type { Invoice } from "@/lib/types";
 
 export interface InvoiceInput {
@@ -69,6 +70,13 @@ export async function createInvoice(input: InvoiceInput): Promise<ActionResult> 
         notes: "Invoice marked paid",
       });
     }
+
+    await logEvent(supabase, user.id, {
+      category: "invoice",
+      action: "invoice.create",
+      summary: `Created a ${input.status} invoice`,
+      metadata: { invoice_id: data.id },
+    });
 
     revalidateAll();
     return { ok: true };
@@ -168,6 +176,13 @@ export async function updateInvoice(
       // untouched rather than clobbering the user's payment history.
     }
 
+    await logEvent(supabase, user.id, {
+      category: "invoice",
+      action: "invoice.update",
+      summary: "Updated an invoice",
+      metadata: { invoice_id: id },
+    });
+
     revalidateAll();
     return { ok: true };
   } catch (e) {
@@ -214,6 +229,13 @@ export async function markInvoicePaid(id: string): Promise<ActionResult> {
       });
     }
 
+    await logEvent(supabase, user.id, {
+      category: "invoice",
+      action: "invoice.paid",
+      summary: "Marked an invoice paid",
+      metadata: { invoice_id: id },
+    });
+
     revalidateAll();
     return { ok: true };
   } catch (e) {
@@ -223,10 +245,16 @@ export async function markInvoicePaid(id: string): Promise<ActionResult> {
 
 export async function deleteInvoice(id: string): Promise<ActionResult> {
   try {
-    await requireUser();
+    const user = await requireUser();
     const supabase = await createClient();
     const { error } = await supabase.from("invoices").delete().eq("id", id);
     if (error) throw error;
+    await logEvent(supabase, user.id, {
+      category: "invoice",
+      action: "invoice.delete",
+      summary: "Deleted an invoice",
+      metadata: { invoice_id: id },
+    });
     revalidateAll();
     return { ok: true };
   } catch (e) {

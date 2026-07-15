@@ -306,6 +306,43 @@ create policy payment_methods_delete_own on public.payment_methods
   for delete to authenticated using ((select auth.uid()) = user_id);
 
 -- -----------------------------------------------------------------------------
+-- Security activity log (0007b) — powers Audit Log, Login History, and Alerts.
+-- -----------------------------------------------------------------------------
+create table if not exists public.security_events (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users (id) on delete cascade,
+  category text not null,
+  action text not null,
+  summary text not null,
+  is_alert boolean not null default false,
+  read_at timestamptz,
+  ip text,
+  location text,
+  device text,
+  user_agent text,
+  metadata jsonb,
+  created_at timestamptz not null default now()
+);
+create index if not exists idx_security_events_user_created
+  on public.security_events (user_id, created_at desc);
+create index if not exists idx_security_events_user_unread
+  on public.security_events (user_id) where is_alert and read_at is null;
+create index if not exists idx_security_events_user_category
+  on public.security_events (user_id, category, created_at desc);
+
+alter table public.security_events enable row level security;
+drop policy if exists security_events_select_own on public.security_events;
+create policy security_events_select_own on public.security_events
+  for select to authenticated using ((select auth.uid()) = user_id);
+drop policy if exists security_events_insert_own on public.security_events;
+create policy security_events_insert_own on public.security_events
+  for insert to authenticated with check ((select auth.uid()) = user_id);
+drop policy if exists security_events_update_own on public.security_events;
+create policy security_events_update_own on public.security_events
+  for update to authenticated
+  using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+
+-- -----------------------------------------------------------------------------
 -- Storage: PRIVATE `logos` bucket + per-user object policies.
 -- NOT included inline here: `create policy on storage.objects` can fail with
 -- "must be owner of table objects", which would roll back this whole script.

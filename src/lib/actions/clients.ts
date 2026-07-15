@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/auth";
+import { logEvent } from "@/lib/security/log";
 
 export interface ClientInput {
   name: string;
@@ -36,6 +37,11 @@ export async function createClientRecord(
       is_flagged: input.is_flagged ?? false,
     });
     if (error) throw error;
+    await logEvent(supabase, user.id, {
+      category: "client",
+      action: "client.create",
+      summary: `Added client “${input.name.trim()}”`,
+    });
     revalidateAll();
     return { ok: true };
   } catch (e) {
@@ -48,7 +54,7 @@ export async function updateClientRecord(
   input: ClientInput,
 ): Promise<ActionResult> {
   try {
-    await requireUser();
+    const user = await requireUser();
     const supabase = await createClient();
     const { error } = await supabase
       .from("clients")
@@ -63,6 +69,12 @@ export async function updateClientRecord(
       })
       .eq("id", id);
     if (error) throw error;
+    await logEvent(supabase, user.id, {
+      category: "client",
+      action: "client.update",
+      summary: `Updated client “${input.name.trim()}”`,
+      metadata: { client_id: id },
+    });
     revalidateAll();
     return { ok: true };
   } catch (e) {
@@ -75,13 +87,19 @@ export async function toggleClientFlag(
   flagged: boolean,
 ): Promise<ActionResult> {
   try {
-    await requireUser();
+    const user = await requireUser();
     const supabase = await createClient();
     const { error } = await supabase
       .from("clients")
       .update({ is_flagged: flagged })
       .eq("id", id);
     if (error) throw error;
+    await logEvent(supabase, user.id, {
+      category: "client",
+      action: "client.flag",
+      summary: flagged ? "Flagged a client" : "Unflagged a client",
+      metadata: { client_id: id },
+    });
     revalidateAll();
     return { ok: true };
   } catch (e) {
@@ -94,13 +112,19 @@ export async function setClientArchived(
   archived: boolean,
 ): Promise<ActionResult> {
   try {
-    await requireUser();
+    const user = await requireUser();
     const supabase = await createClient();
     const { error } = await supabase
       .from("clients")
       .update({ is_archived: archived })
       .eq("id", id);
     if (error) throw error;
+    await logEvent(supabase, user.id, {
+      category: "client",
+      action: "client.archive",
+      summary: archived ? "Archived a client" : "Restored a client",
+      metadata: { client_id: id },
+    });
     revalidateAll();
     return { ok: true };
   } catch (e) {
@@ -110,10 +134,16 @@ export async function setClientArchived(
 
 export async function deleteClientRecord(id: string): Promise<ActionResult> {
   try {
-    await requireUser();
+    const user = await requireUser();
     const supabase = await createClient();
     const { error } = await supabase.from("clients").delete().eq("id", id);
     if (error) throw error;
+    await logEvent(supabase, user.id, {
+      category: "client",
+      action: "client.delete",
+      summary: "Deleted a client",
+      metadata: { client_id: id },
+    });
     revalidateAll();
     return { ok: true };
   } catch (e) {

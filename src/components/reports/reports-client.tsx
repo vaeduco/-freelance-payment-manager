@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/toast";
+import { logReportExport } from "@/lib/actions/security";
 import { STATUS_META } from "@/lib/constants";
 import type { InvoiceStatus, InvoiceWithClient, PaymentWithRelations } from "@/lib/types";
 import { cn, formatCurrency, toCSV, downloadFile, downloadBlob } from "@/lib/utils";
@@ -95,12 +96,14 @@ export function ReportsClient({
   function exportInvoicesCsv() {
     const rows = buildInvoiceRows(invoices, invoiceNumbers, opts);
     downloadFile(toCSV(rows, INVOICE_HEADERS), `invoices_${slug}.csv`);
+    void logReportExport("an invoices CSV");
     toast(`Exported ${rows.length} invoice${rows.length === 1 ? "" : "s"}`);
   }
 
   function exportPaymentsCsv() {
     const rows = buildPaymentRows(payments, invoiceNumbers, opts);
     downloadFile(toCSV(rows, PAYMENT_HEADERS), `payments_${slug}.csv`);
+    void logReportExport("a payments CSV");
     toast(`Exported ${rows.length} payment${rows.length === 1 ? "" : "s"}`);
   }
 
@@ -113,6 +116,7 @@ export function ReportsClient({
       zip.file(`summary_${slug}.csv`, toCSV(buildSummaryRows(summary), SUMMARY_HEADERS));
       const blob = await zip.generateAsync({ type: "blob" });
       downloadBlob(blob, `export_${slug}.zip`);
+      void logReportExport("an accountant ZIP");
       toast("Accountant export ready");
     } catch (e) {
       toast((e as Error).message || "Export failed", "error");

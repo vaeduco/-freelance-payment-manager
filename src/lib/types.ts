@@ -110,6 +110,31 @@ export interface ClientWithStats extends Client {
   last_activity: string;
 }
 
+export type SecurityEventCategory =
+  | "auth"
+  | "invoice"
+  | "client"
+  | "payment"
+  | "payment_method"
+  | "report"
+  | "security";
+
+export interface SecurityEvent {
+  id: string;
+  user_id: string;
+  category: SecurityEventCategory;
+  action: string;
+  summary: string;
+  is_alert: boolean;
+  read_at: string | null;
+  ip: string | null;
+  location: string | null;
+  device: string | null;
+  user_agent: string | null;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
+}
+
 export interface DashboardStats {
   incomeThisMonth: number;
   incomeThisYear: number;

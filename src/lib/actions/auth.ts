@@ -2,6 +2,7 @@
 
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import { logEvent, requestContext } from "@/lib/security/log";
 
 type AuthResult =
   | { ok: true; needsConfirmation?: boolean }
@@ -23,11 +24,38 @@ export async function signIn(
 ): Promise<AuthResult> {
   try {
     const supabase = await createClient();
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email: email.trim(),
       password,
     });
     if (error) return { error: error.message };
+
+    // Record the sign-in for Login History; raise an alert on a new device.
+    if (data.user) {
+      const ctx = await requestContext();
+      let newDevice = false;
+      if (ctx.device) {
+        const { data: seen } = await supabase
+          .from("security_events")
+          .select("id")
+          .eq("category", "auth")
+          .eq("device", ctx.device)
+          .limit(1);
+        newDevice = (seen?.length ?? 0) === 0;
+      }
+      await logEvent(supabase, data.user.id, {
+        category: "auth",
+        action: "login",
+        summary: newDevice
+          ? `New device signed in${ctx.device ? `: ${ctx.device}` : ""}`
+          : `Signed in${ctx.device ? ` from ${ctx.device}` : ""}`,
+        isAlert: newDevice,
+        ip: ctx.ip,
+        location: ctx.location,
+        device: ctx.device,
+        userAgent: ctx.userAgent,
+      });
+    }
     return { ok: true };
   } catch (e) {
     return { error: (e as Error).message };
@@ -95,8 +123,18 @@ export async function requestPasswordReset(email: string): Promise<AuthResult> {
 export async function updatePassword(newPassword: string): Promise<AuthResult> {
   try {
     const supabase = await createClient();
-    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    const { data, error } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
     if (error) return { error: error.message };
+    if (data.user) {
+      await logEvent(supabase, data.user.id, {
+        category: "security",
+        action: "password.change",
+        summary: "Password changed",
+        isAlert: true,
+      });
+    }
     return { ok: true };
   } catch (e) {
     return { error: (e as Error).message };

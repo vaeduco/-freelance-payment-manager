@@ -17,6 +17,7 @@ import { Modal } from "@/components/ui/modal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useToast } from "@/components/ui/toast";
 import { createClient } from "@/lib/supabase/client";
+import { logSecurityActivity } from "@/lib/actions/security";
 
 export interface TotpFactor {
   id: string;
@@ -96,6 +97,7 @@ export function TwoFactorCard({
         toast(vErr.message, "error");
         return;
       }
+      await logSecurityActivity("2fa.enable", "Two-factor authentication enabled");
       toast("Two-factor authentication enabled");
       await closeEnroll(false);
       await onChanged();
@@ -120,6 +122,7 @@ export function TwoFactorCard({
     for (const f of factors) {
       await supabase.auth.mfa.unenroll({ factorId: f.id });
     }
+    await logSecurityActivity("2fa.disable", "Two-factor authentication disabled");
     toast("Two-factor authentication disabled");
     await onChanged();
   }

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/auth";
 import { reconcileInvoicePaidStatus } from "@/lib/invoice-sync";
+import { logEvent } from "@/lib/security/log";
 
 export interface PaymentInput {
   client_id: string | null;
@@ -45,6 +46,11 @@ export async function createPayment(
 
     // Mark the linked invoice paid only once payments cover its amount.
     await reconcileInvoicePaidStatus(supabase, input.invoice_id);
+    await logEvent(supabase, user.id, {
+      category: "payment",
+      action: "payment.create",
+      summary: "Logged a payment",
+    });
 
     revalidateAll();
     return { ok: true };
@@ -58,7 +64,7 @@ export async function updatePayment(
   input: PaymentInput,
 ): Promise<ActionResult> {
   try {
-    await requireUser();
+    const user = await requireUser();
     const supabase = await createClient();
 
     // Capture the previous invoice link so we can reconcile both invoices.
@@ -88,6 +94,12 @@ export async function updatePayment(
       await reconcileInvoicePaidStatus(supabase, prevInvoiceId);
     }
     await reconcileInvoicePaidStatus(supabase, input.invoice_id);
+    await logEvent(supabase, user.id, {
+      category: "payment",
+      action: "payment.update",
+      summary: "Updated a payment",
+      metadata: { payment_id: id },
+    });
 
     revalidateAll();
     return { ok: true };
@@ -98,7 +110,7 @@ export async function updatePayment(
 
 export async function deletePayment(id: string): Promise<ActionResult> {
   try {
-    await requireUser();
+    const user = await requireUser();
     const supabase = await createClient();
 
     // Capture the invoice link before deleting so we can revert its status.
@@ -115,6 +127,12 @@ export async function deletePayment(id: string): Promise<ActionResult> {
       supabase,
       (prev as { invoice_id: string | null } | null)?.invoice_id,
     );
+    await logEvent(supabase, user.id, {
+      category: "payment",
+      action: "payment.delete",
+      summary: "Deleted a payment",
+      metadata: { payment_id: id },
+    });
 
     revalidateAll();
     return { ok: true };

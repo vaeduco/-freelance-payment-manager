@@ -7,14 +7,24 @@ import { SecurityScore } from "./security-score";
 import { TwoFactorCard, type TotpFactor } from "./two-factor-card";
 import { ChangePasswordCard } from "./change-password-card";
 import { SignOutOthersCard } from "./sign-out-others-card";
+import { SecurityActivity } from "./security-activity";
+import type { SecurityEvent } from "@/lib/types";
 
 export function SecurityClient({
   emailConfirmed,
   passwordCheckedAt,
+  alerts,
+  logins,
+  activity,
+  unreadCount,
 }: {
   email: string;
   emailConfirmed: boolean;
   passwordCheckedAt: string | null;
+  alerts: SecurityEvent[];
+  logins: SecurityEvent[];
+  activity: SecurityEvent[];
+  unreadCount: number;
 }) {
   const [factors, setFactors] = useState<TotpFactor[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -64,6 +74,13 @@ export function SecurityClient({
       <ChangePasswordCard />
 
       <SignOutOthersCard />
+
+      <SecurityActivity
+        alerts={alerts}
+        logins={logins}
+        activity={activity}
+        unreadCount={unreadCount}
+      />
     </div>
   );
 }
