@@ -117,7 +117,21 @@ export type SecurityEventCategory =
   | "payment"
   | "payment_method"
   | "report"
-  | "security";
+  | "security"
+  | "share";
+
+/** A public share link for one invoice (password_hash never leaves the server). */
+export interface SharedLink {
+  id: string;
+  invoice_id: string;
+  token: string;
+  has_password: boolean;
+  expires_at: string | null;
+  max_views: number | null;
+  view_count: number;
+  revoked: boolean;
+  created_at: string;
+}
 
 export interface SecurityEvent {
   id: string;

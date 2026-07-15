@@ -14,6 +14,8 @@ const PUBLIC_PATHS = [
   // Static legal pages — reachable without an account.
   "/terms",
   "/privacy",
+  // Public secure-share invoice view (token + optional password, via RPC).
+  "/s",
 ];
 
 function isPublic(pathname: string) {

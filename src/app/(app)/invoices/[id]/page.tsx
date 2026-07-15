@@ -6,7 +6,9 @@ import { getInvoice, getInvoicesWithClients } from "@/lib/data/invoices";
 import { getProfile } from "@/lib/data/profile";
 import { getLogoSignedUrl } from "@/lib/data/storage";
 import { deriveInvoiceNumbers } from "@/lib/reports";
+import { getShareLinkForInvoice } from "@/lib/data/shares";
 import { InvoiceDocument } from "@/components/invoices/invoice-document";
+import { ShareInvoiceCard } from "@/components/invoices/share-invoice-card";
 
 export const metadata: Metadata = { title: "Invoice" };
 
@@ -26,6 +28,7 @@ export default async function InvoiceDetailPage({
 
   const numbers = deriveInvoiceNumbers(allInvoices);
   const logoUrl = await getLogoSignedUrl(profile?.logo_path);
+  const shareLink = await getShareLinkForInvoice(id);
   const businessName =
     profile?.business_name?.trim() ||
     profile?.full_name?.trim() ||
@@ -60,6 +63,10 @@ export default async function InvoiceDetailPage({
           logoUrl={logoUrl}
           currency={profile?.currency ?? "USD"}
         />
+      </div>
+
+      <div className="mt-6">
+        <ShareInvoiceCard invoiceId={id} link={shareLink} />
       </div>
     </div>
   );
