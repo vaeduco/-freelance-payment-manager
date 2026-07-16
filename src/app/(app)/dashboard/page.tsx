@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import { AlertTriangle, Clock, TrendingUp, Wallet } from "lucide-react";
 import {
   Card,
@@ -12,12 +13,15 @@ import { IncomeBarChart } from "@/components/charts/income-bar-chart";
 import { QuickActions } from "@/components/dashboard/quick-actions";
 import { RecentActivity } from "@/components/dashboard/recent-activity";
 import { NeedsAttention } from "@/components/dashboard/needs-attention";
+import { ClientBreakdown } from "@/components/dashboard/client-breakdown";
 import { getDashboardData, getNeedsAttention } from "@/lib/data/dashboard";
 import { getProfile } from "@/lib/data/profile";
-import { getClients } from "@/lib/data/clients";
+import { getClients, getClientsWithStats } from "@/lib/data/clients";
 import { getInvoicesWithClients } from "@/lib/data/invoices";
 import { getPaymentMethods } from "@/lib/data/payment-methods";
+import { getUserSettings } from "@/lib/data/user-settings";
 import { formatCurrency, hourlyRatesByProjectType } from "@/lib/utils";
+import type { DashboardWidgetKey } from "@/lib/types";
 
 export const metadata = { title: "Dashboard" };
 
@@ -26,16 +30,20 @@ export default async function DashboardPage() {
     { stats, monthly, activity },
     profile,
     clients,
+    clientStats,
     invoices,
     paymentMethods,
     needsAttention,
+    settings,
   ] = await Promise.all([
     getDashboardData(),
     getProfile(),
     getClients(),
+    getClientsWithStats(),
     getInvoicesWithClients(),
     getPaymentMethods(),
     getNeedsAttention(),
+    getUserSettings(),
   ]);
 
   const currency = profile?.currency ?? "USD";
@@ -55,12 +63,57 @@ export default async function DashboardPage() {
 
   const twelveMonthTotal = monthly.reduce((sum, m) => sum + m.total, 0);
 
+  const clientSlices = clientStats.map((c) => ({
+    label: c.name,
+    value: c.total_paid,
+  }));
+
+  // Reorderable widgets, keyed so the dashboard can render them in the order
+  // the user set on /settings/appearance.
+  const widgets: Record<DashboardWidgetKey, React.ReactNode> = {
+    income: (
+      <Card>
+        <CardHeader className="flex-row items-start justify-between gap-4 space-y-0">
+          <div className="space-y-1.5">
+            <CardTitle>Income</CardTitle>
+            <CardDescription>Last 12 months</CardDescription>
+          </div>
+          <div className="text-right">
+            <p className="text-xl font-bold tracking-tight tabular-nums">
+              {formatCurrency(twelveMonthTotal, currency)}
+            </p>
+            <p className="text-xs text-muted-foreground">total collected</p>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <IncomeBarChart data={monthly} currency={currency} />
+        </CardContent>
+      </Card>
+    ),
+    needs_attention: (
+      <NeedsAttention
+        overdue={needsAttention.overdue}
+        stale={needsAttention.stale}
+        currency={currency}
+      />
+    ),
+    recent_payments: (
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent payments</CardTitle>
+          <CardDescription>Your latest invoices and payments</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <RecentActivity items={activity} currency={currency} />
+        </CardContent>
+      </Card>
+    ),
+    client_breakdown: <ClientBreakdown data={clientSlices} currency={currency} />,
+  };
+
   return (
     <div>
-      <PageHeader
-        title="Dashboard"
-        description={`Welcome back, ${firstName}`}
-      >
+      <PageHeader title="Dashboard" description={`Welcome back, ${firstName}`}>
         <QuickActions
           clients={clients}
           invoices={invoices}
@@ -100,43 +153,10 @@ export default async function DashboardPage() {
         />
       </div>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardHeader className="flex-row items-start justify-between gap-4 space-y-0">
-            <div className="space-y-1.5">
-              <CardTitle>Income</CardTitle>
-              <CardDescription>Last 12 months</CardDescription>
-            </div>
-            <div className="text-right">
-              <p className="text-xl font-bold tracking-tight tabular-nums">
-                {formatCurrency(twelveMonthTotal, currency)}
-              </p>
-              <p className="text-xs text-muted-foreground">total collected</p>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <IncomeBarChart data={monthly} currency={currency} />
-          </CardContent>
-        </Card>
-
-        <div className="space-y-6 lg:col-span-1">
-          <NeedsAttention
-            overdue={needsAttention.overdue}
-            stale={needsAttention.stale}
-            currency={currency}
-          />
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent activity</CardTitle>
-              <CardDescription>
-                Your latest invoices and payments
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <RecentActivity items={activity} currency={currency} />
-            </CardContent>
-          </Card>
-        </div>
+      <div className="mt-6 grid items-start gap-6 lg:grid-cols-2">
+        {settings.dashboard_widget_order.map((key) => (
+          <Fragment key={key}>{widgets[key]}</Fragment>
+        ))}
       </div>
     </div>
   );

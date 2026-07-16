@@ -457,8 +457,46 @@ grant execute on function public.open_shared_link(uuid, text) to anon, authentic
 -- (create the bucket in the Storage UI, then add the 4 policies).
 -- -----------------------------------------------------------------------------
 
+-- -----------------------------------------------------------------------------
+-- user_settings — one row per user (Appearance & preferences). See 0008.
+-- -----------------------------------------------------------------------------
+create table if not exists public.user_settings (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users (id) on delete cascade,
+  theme text not null default 'system',
+  font_size text not null default 'medium',
+  density text not null default 'comfortable',
+  sidebar_default text not null default 'expanded',
+  date_format text not null default 'MM/DD/YYYY',
+  number_format text not null default '1,000.00',
+  default_currency text not null default 'USD',
+  show_both_currencies boolean not null default false,
+  dashboard_widget_order text[] not null
+    default array['income', 'needs_attention', 'recent_payments', 'client_breakdown'],
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create unique index if not exists uniq_user_settings_user on public.user_settings (user_id);
+
+drop trigger if exists trg_user_settings_updated on public.user_settings;
+create trigger trg_user_settings_updated
+  before update on public.user_settings
+  for each row execute function public.set_updated_at();
+
+alter table public.user_settings enable row level security;
+drop policy if exists user_settings_select_own on public.user_settings;
+create policy user_settings_select_own on public.user_settings
+  for select to authenticated using ((select auth.uid()) = user_id);
+drop policy if exists user_settings_insert_own on public.user_settings;
+create policy user_settings_insert_own on public.user_settings
+  for insert to authenticated with check ((select auth.uid()) = user_id);
+drop policy if exists user_settings_update_own on public.user_settings;
+create policy user_settings_update_own on public.user_settings
+  for update to authenticated
+  using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+
 -- =============================================================================
--- Done. Tables: profiles, clients, invoices, payments, payment_methods
--- (all RLS-protected, scoped TO authenticated). Client-owner trigger on
--- invoices + payments. Logo storage: see 0005b_logos_storage.sql.
+-- Done. Tables: profiles, clients, invoices, payments, payment_methods,
+-- user_settings (all RLS-protected, scoped TO authenticated). Client-owner
+-- trigger on invoices + payments. Logo storage: see 0005b_logos_storage.sql.
 -- =============================================================================

@@ -141,3 +141,51 @@
 ::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--muted-foreground) / 0.5);
 }
+
+/* ---------------------------------------------------------------------------
+   Appearance preferences (set on <html> by SettingsProvider).
+
+   Font size scales the root, so every rem-based Tailwind size scales with it —
+   fully app-wide. Density is a bounded "compact" ruleset (card padding + common
+   gaps); it can be deepened per component later. These rules sit after Tailwind's
+   utilities in source order, so they win at equal specificity, and the pt-0
+   overrides come after the padding overrides so card content stays top-flush.
+--------------------------------------------------------------------------- */
+html[data-font-size="small"] {
+  font-size: 93.75%; /* ~15px */
+}
+html[data-font-size="medium"] {
+  font-size: 100%; /* ~16px */
+}
+html[data-font-size="large"] {
+  font-size: 112.5%; /* ~18px */
+}
+
+html[data-density="compact"] .p-5 {
+  padding: 0.875rem;
+}
+@media (min-width: 640px) {
+  html[data-density="compact"] .sm\:p-6 {
+    padding: 1rem;
+  }
+}
+/* Re-flatten the tops that Card content/footer zero out (declared last so they
+   beat the equal-specificity padding rules above). */
+html[data-density="compact"] .pt-0 {
+  padding-top: 0;
+}
+@media (min-width: 640px) {
+  html[data-density="compact"] .sm\:pt-0 {
+    padding-top: 0;
+  }
+}
+/* Tighten common vertical rhythm + grid gaps in compact mode. */
+html[data-density="compact"] .space-y-6 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 1rem;
+}
+html[data-density="compact"] .gap-6 {
+  gap: 1rem;
+}
+html[data-density="compact"] .gap-4 {
+  gap: 0.625rem;
+}

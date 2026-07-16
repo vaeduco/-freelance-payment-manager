@@ -1,10 +1,12 @@
 import { redirect } from "next/navigation";
 import { ToastProvider } from "@/components/ui/toast";
+import { SettingsProvider } from "@/components/settings/settings-provider";
 import { Sidebar } from "@/components/app/sidebar";
 import { MobileTopBar, MobileBottomNav } from "@/components/app/mobile-nav";
 import { Footer } from "@/components/app/footer";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/data/profile";
+import { getUserSettings } from "@/lib/data/user-settings";
 
 export default async function AppLayout({
   children,
@@ -37,19 +39,23 @@ export default async function AppLayout({
     "there";
   const u = { name, email: user?.email ?? "" };
 
+  const settings = await getUserSettings();
+
   return (
-    <ToastProvider>
-      <div className="min-h-dvh bg-background">
-        <Sidebar user={u} />
-        <MobileTopBar user={u} />
-        <main className="lg:pl-64">
-          <div className="mx-auto max-w-6xl px-4 pb-28 pt-6 sm:px-6 lg:px-8 lg:pb-12 lg:pt-8">
-            {children}
-            <Footer />
-          </div>
-        </main>
-        <MobileBottomNav />
-      </div>
-    </ToastProvider>
+    <SettingsProvider initial={settings}>
+      <ToastProvider>
+        <div className="min-h-dvh bg-background">
+          <Sidebar user={u} />
+          <MobileTopBar user={u} />
+          <main className="lg:pl-64">
+            <div className="mx-auto max-w-6xl px-4 pb-28 pt-6 sm:px-6 lg:px-8 lg:pb-12 lg:pt-8">
+              {children}
+              <Footer />
+            </div>
+          </main>
+          <MobileBottomNav />
+        </div>
+      </ToastProvider>
+    </SettingsProvider>
   );
 }

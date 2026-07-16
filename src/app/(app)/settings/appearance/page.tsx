@@ -1,15 +1,19 @@
 import type { Metadata } from "next";
-import { Paintbrush } from "lucide-react";
-import { ComingSoon } from "@/components/settings/coming-soon";
+import { PageHeader } from "@/components/app/page-header";
+import { AppearanceClient } from "@/components/settings/appearance-client";
+import { getUserSettings } from "@/lib/data/user-settings";
 
 export const metadata: Metadata = { title: "Appearance" };
 
-export default function AppearanceSettingsPage() {
+export default async function AppearanceSettingsPage() {
+  const settings = await getUserSettings();
   return (
-    <ComingSoon
-      title="Appearance"
-      description="Personalize the look and feel. (Theme toggle lives in the sidebar for now.)"
-      icon={Paintbrush}
-    />
+    <div>
+      <PageHeader
+        title="Appearance"
+        description="Personalize the theme, layout, and how your dashboard is arranged."
+      />
+      <AppearanceClient initial={settings} />
+    </div>
   );
 }

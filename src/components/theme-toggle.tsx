@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 import { Moon, Sun } from "lucide-react";
+import { saveThemePref } from "@/lib/actions/user-settings";
 import { cn } from "@/lib/utils";
 
 export function ThemeToggle({ className }: { className?: string }) {
@@ -15,7 +16,12 @@ export function ThemeToggle({ className }: { className?: string }) {
   return (
     <button
       type="button"
-      onClick={() => setTheme(isDark ? "light" : "dark")}
+      onClick={() => {
+        const next = isDark ? "light" : "dark";
+        setTheme(next);
+        // Persist so the flip survives a reload (best-effort; ignore failures).
+        void saveThemePref(next);
+      }}
       aria-label="Toggle theme"
       className={cn(
         "inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-background text-foreground transition-colors hover:bg-secondary",

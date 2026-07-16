@@ -165,3 +165,58 @@ export interface MonthlyIncomePoint {
   label: string; // e.g. "Jan"
   total: number;
 }
+
+// ---------------------------------------------------------------------------
+// User settings (Appearance & preferences) — one row per user, table 0008.
+// ---------------------------------------------------------------------------
+
+export type ThemePref = "light" | "dark" | "system";
+export type FontSize = "small" | "medium" | "large";
+export type Density = "comfortable" | "compact";
+export type SidebarDefault = "expanded" | "collapsed";
+export type DateFormatPref = "MM/DD/YYYY" | "DD/MM/YYYY" | "YYYY-MM-DD";
+export type NumberFormatPref = "1,000.00" | "1.000,00";
+export type DashboardWidgetKey =
+  | "income"
+  | "needs_attention"
+  | "recent_payments"
+  | "client_breakdown";
+
+export interface UserSettings {
+  theme: ThemePref;
+  font_size: FontSize;
+  density: Density;
+  sidebar_default: SidebarDefault;
+  date_format: DateFormatPref;
+  number_format: NumberFormatPref;
+  default_currency: string;
+  show_both_currencies: boolean;
+  dashboard_widget_order: DashboardWidgetKey[];
+}
+
+export const DEFAULT_DASHBOARD_WIDGET_ORDER: DashboardWidgetKey[] = [
+  "income",
+  "needs_attention",
+  "recent_payments",
+  "client_breakdown",
+];
+
+export const DEFAULT_USER_SETTINGS: UserSettings = {
+  theme: "system",
+  font_size: "medium",
+  density: "comfortable",
+  sidebar_default: "expanded",
+  date_format: "MM/DD/YYYY",
+  number_format: "1,000.00",
+  default_currency: "USD",
+  show_both_currencies: false,
+  dashboard_widget_order: DEFAULT_DASHBOARD_WIDGET_ORDER,
+};
+
+/** Reorderable dashboard widgets (key -> display label), in default order. */
+export const DASHBOARD_WIDGETS: { key: DashboardWidgetKey; label: string }[] = [
+  { key: "income", label: "Income overview" },
+  { key: "needs_attention", label: "Needs attention" },
+  { key: "recent_payments", label: "Recent payments" },
+  { key: "client_breakdown", label: "Client breakdown" },
+];
