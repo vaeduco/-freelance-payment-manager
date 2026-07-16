@@ -5,7 +5,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronDown } from "lucide-react";
 import { Wordmark } from "@/components/brand";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { UserMenu } from "@/components/app/user-menu";
 import { NAV, type NavItem } from "@/components/app/nav-items";
 import { cn } from "@/lib/utils";
@@ -135,13 +134,7 @@ export function Sidebar({ user }: { user: { name: string; email: string } }) {
         )}
       </nav>
 
-      <div className="space-y-3 border-t border-border p-3">
-        <div className="flex items-center justify-between px-1">
-          <span className="text-xs font-medium text-muted-foreground">
-            Appearance
-          </span>
-          <ThemeToggle />
-        </div>
+      <div className="border-t border-border p-3">
         <UserMenu name={user.name} email={user.email} align="up" />
       </div>
     </aside>
