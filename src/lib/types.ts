@@ -18,6 +18,10 @@ export interface Profile {
   onboarded_at: string | null;
   /** Last time the password was checked against HIBP and came back clean. */
   password_checked_at: string | null;
+  /** Public booking handle for /book/[slug]; null until the user picks one. */
+  booking_slug: string | null;
+  /** IANA timezone anchoring the user's availability (e.g. "America/Los_Angeles"). */
+  timezone: string;
   created_at: string;
   updated_at: string;
 }
@@ -220,3 +224,45 @@ export const DASHBOARD_WIDGETS: { key: DashboardWidgetKey; label: string }[] = [
   { key: "recent_payments", label: "Recent payments" },
   { key: "client_breakdown", label: "Client breakdown" },
 ];
+
+// ---------------------------------------------------------------------------
+// Booking / scheduling module (0009)
+// ---------------------------------------------------------------------------
+
+export interface Availability {
+  id: string;
+  user_id: string;
+  day_of_week: number; // 0 = Sunday ... 6 = Saturday
+  start_time: string; // "HH:MM:SS"
+  end_time: string;
+  slot_duration_minutes: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export type BookingStatus = "confirmed" | "cancelled" | "completed";
+
+export interface Booking {
+  id: string;
+  user_id: string;
+  client_id: string | null;
+  guest_name: string;
+  guest_email: string;
+  scheduled_at: string; // ISO timestamptz (UTC)
+  duration_minutes: number;
+  status: BookingStatus;
+  notes: string | null;
+  created_at: string;
+}
+
+/** Day-of-week labels indexed 0 (Sunday) – 6 (Saturday), matching day_of_week. */
+export const WEEKDAYS = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+] as const;
