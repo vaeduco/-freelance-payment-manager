@@ -229,19 +229,19 @@ export const DASHBOARD_WIDGETS: { key: DashboardWidgetKey; label: string }[] = [
 // Booking / scheduling module (0009)
 // ---------------------------------------------------------------------------
 
-export interface Availability {
+export interface AvailableDate {
   id: string;
   user_id: string;
-  day_of_week: number; // 0 = Sunday ... 6 = Saturday
-  start_time: string; // "HH:MM:SS"
-  end_time: string;
-  slot_duration_minutes: number;
-  is_active: boolean;
+  date: string; // YYYY-MM-DD
   created_at: string;
-  updated_at: string;
 }
 
-export type BookingStatus = "confirmed" | "cancelled" | "completed";
+export type BookingStatus =
+  | "pending"
+  | "confirmed"
+  | "declined"
+  | "cancelled"
+  | "completed";
 
 export interface Booking {
   id: string;
@@ -249,8 +249,9 @@ export interface Booking {
   client_id: string | null;
   guest_name: string;
   guest_email: string;
-  scheduled_at: string; // ISO timestamptz (UTC)
-  duration_minutes: number;
+  requested_date: string; // YYYY-MM-DD
+  requested_start_time: string; // HH:MM:SS
+  requested_end_time: string; // HH:MM:SS
   status: BookingStatus;
   notes: string | null;
   created_at: string;

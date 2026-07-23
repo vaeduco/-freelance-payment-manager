@@ -3,19 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/auth";
+import type { BookingStatus } from "@/lib/types";
 
 type ActionResult = { ok: true } | { error: string };
 
-export interface AvailabilityInput {
-  day_of_week: number;
-  start_time: string; // "HH:MM"
-  end_time: string;
-  slot_duration_minutes: number;
-  is_active: boolean;
-}
-
-const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 const SLUG_RE = /^[a-z0-9][a-z0-9-]{1,48}[a-z0-9]$/; // 3–50 chars, no edge hyphen
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 function isValidTimezone(tz: string): boolean {
   if (!tz || tz.length > 64) return false;
@@ -27,91 +20,45 @@ function isValidTimezone(tz: string): boolean {
   }
 }
 
-function toMinutes(t: string): number {
-  const [h, m] = t.split(":").map(Number);
-  return h * 60 + m;
-}
-
-/**
- * Replace the user's entire weekly availability with the given rules. Validates
- * each rule (day 0–6, valid HH:MM, end > start, sane slot length), then wipes
- * and re-inserts under RLS (only the caller's own rows are ever touched).
- */
-export async function saveAvailability(
-  rules: AvailabilityInput[],
-): Promise<ActionResult> {
+/** Toggle a single date in the caller's availability (mark / unmark). */
+export async function toggleAvailableDate(
+  date: string,
+): Promise<{ ok: true; active: boolean } | { error: string }> {
   try {
-    await requireUser(); // guard: throws if no session (RPC also checks auth.uid())
+    const user = await requireUser();
+    if (!DATE_RE.test(date)) return { error: "Invalid date." };
     const supabase = await createClient();
 
-    if (rules.length > 100) return { error: "Too many availability ranges." };
+    const { data: existing } = await supabase
+      .from("available_dates")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("date", date)
+      .maybeSingle();
 
-    const clean = [];
-    for (const r of rules) {
-      if (!Number.isInteger(r.day_of_week) || r.day_of_week < 0 || r.day_of_week > 6)
-        return { error: "Invalid day of week." };
-      if (!TIME_RE.test(r.start_time) || !TIME_RE.test(r.end_time))
-        return { error: "Times must be in HH:MM format." };
-      if (toMinutes(r.end_time) <= toMinutes(r.start_time))
-        return { error: "End time must be after start time." };
-      const slot = Number(r.slot_duration_minutes);
-      if (!Number.isInteger(slot) || slot < 5 || slot > 480)
-        return { error: "Slot length must be between 5 and 480 minutes." };
-      clean.push({
-        day_of_week: r.day_of_week,
-        start_time: r.start_time,
-        end_time: r.end_time,
-        slot_duration_minutes: slot,
-        is_active: Boolean(r.is_active),
-      });
+    if (existing) {
+      const { error } = await supabase
+        .from("available_dates")
+        .delete()
+        .eq("id", existing.id);
+      if (error) return { error: error.message };
+      revalidatePath("/availability");
+      return { ok: true, active: false };
     }
 
-    // Atomic replace via RPC: delete + insert run in one transaction, so a
-    // failed insert can never leave the user with an empty schedule.
-    const { error } = await supabase.rpc("replace_availability", {
-      p_rules: clean,
-    });
-    if (error) return { error: error.message };
-
-    revalidatePath("/settings/scheduling");
-    return { ok: true };
-  } catch (e) {
-    return { error: (e as Error).message };
-  }
-}
-
-/** Set a booking's status (cancel / mark completed). RLS scopes it to the owner. */
-async function setBookingStatus(
-  id: string,
-  status: "cancelled" | "completed",
-): Promise<ActionResult> {
-  try {
-    await requireUser();
-    const supabase = await createClient();
     const { error } = await supabase
-      .from("bookings")
-      .update({ status })
-      .eq("id", id);
-    if (error) return { error: error.message };
-    revalidatePath("/bookings");
-    return { ok: true };
+      .from("available_dates")
+      .insert({ user_id: user.id, date });
+    // A concurrent insert (unique violation) just means it's now marked.
+    if (error && error.code !== "23505") return { error: error.message };
+    revalidatePath("/availability");
+    return { ok: true, active: true };
   } catch (e) {
     return { error: (e as Error).message };
   }
 }
 
-export async function cancelBooking(id: string): Promise<ActionResult> {
-  return setBookingStatus(id, "cancelled");
-}
-export async function completeBooking(id: string): Promise<ActionResult> {
-  return setBookingStatus(id, "completed");
-}
-
-/**
- * Save the public booking handle + timezone on the profile. The slug is
- * normalized + format-checked; a taken slug surfaces a friendly error via the
- * partial-unique index. An empty slug clears the public link.
- */
+/** Save the public booking handle + timezone on the profile. */
 export async function saveBookingSettings(
   rawSlug: string,
   timezone: string,
@@ -119,7 +66,6 @@ export async function saveBookingSettings(
   try {
     const user = await requireUser();
     const supabase = await createClient();
-
     const slug = rawSlug.trim().toLowerCase();
     if (slug && !SLUG_RE.test(slug))
       return {
@@ -132,16 +78,44 @@ export async function saveBookingSettings(
       .from("profiles")
       .update({ booking_slug: slug || null, timezone })
       .eq("id", user.id);
-
     if (error) {
       if (error.code === "23505")
         return { error: "That booking link is already taken — try another." };
       return { error: error.message };
     }
-
-    revalidatePath("/settings/scheduling");
+    revalidatePath("/availability");
     return { ok: true };
   } catch (e) {
     return { error: (e as Error).message };
   }
+}
+
+/** Update a booking's status (RLS scopes it to the owner). Emails: a follow-up. */
+async function setBookingStatus(
+  id: string,
+  status: BookingStatus,
+): Promise<ActionResult> {
+  try {
+    await requireUser();
+    const supabase = await createClient();
+    const { error } = await supabase.from("bookings").update({ status }).eq("id", id);
+    if (error) return { error: error.message };
+    revalidatePath("/bookings");
+    return { ok: true };
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+}
+
+export async function confirmBooking(id: string): Promise<ActionResult> {
+  return setBookingStatus(id, "confirmed");
+}
+export async function declineBooking(id: string): Promise<ActionResult> {
+  return setBookingStatus(id, "declined");
+}
+export async function cancelBooking(id: string): Promise<ActionResult> {
+  return setBookingStatus(id, "cancelled");
+}
+export async function completeBooking(id: string): Promise<ActionResult> {
+  return setBookingStatus(id, "completed");
 }

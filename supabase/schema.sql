@@ -501,42 +501,27 @@ create policy user_settings_update_own on public.user_settings
   using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
 
 -- -----------------------------------------------------------------------------
--- availability + bookings — scheduling module (0009). Owner-only RLS; the public
--- /book/[slug] page reads/writes via SECURITY DEFINER RPCs (0010), no service role.
+-- Booking module v2 (0012): request/approve. Owner-only RLS; the public
+-- /book/[slug] page reads/writes via SECURITY DEFINER RPCs, no service role.
 -- -----------------------------------------------------------------------------
-create table if not exists public.availability (
+create table if not exists public.available_dates (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users (id) on delete cascade,
-  day_of_week integer not null check (day_of_week between 0 and 6),
-  start_time time not null,
-  end_time time not null,
-  slot_duration_minutes integer not null default 30
-    check (slot_duration_minutes between 5 and 480),
-  is_active boolean not null default true,
+  date date not null,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  check (end_time > start_time)
+  unique (user_id, date)
 );
-create index if not exists idx_availability_user on public.availability (user_id);
+create index if not exists idx_available_dates_user on public.available_dates (user_id, date);
 
-drop trigger if exists trg_availability_updated on public.availability;
-create trigger trg_availability_updated
-  before update on public.availability
-  for each row execute function public.set_updated_at();
-
-alter table public.availability enable row level security;
-drop policy if exists availability_select_own on public.availability;
-create policy availability_select_own on public.availability
+alter table public.available_dates enable row level security;
+drop policy if exists available_dates_select_own on public.available_dates;
+create policy available_dates_select_own on public.available_dates
   for select to authenticated using ((select auth.uid()) = user_id);
-drop policy if exists availability_insert_own on public.availability;
-create policy availability_insert_own on public.availability
+drop policy if exists available_dates_insert_own on public.available_dates;
+create policy available_dates_insert_own on public.available_dates
   for insert to authenticated with check ((select auth.uid()) = user_id);
-drop policy if exists availability_update_own on public.availability;
-create policy availability_update_own on public.availability
-  for update to authenticated
-  using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
-drop policy if exists availability_delete_own on public.availability;
-create policy availability_delete_own on public.availability
+drop policy if exists available_dates_delete_own on public.available_dates;
+create policy available_dates_delete_own on public.available_dates
   for delete to authenticated using ((select auth.uid()) = user_id);
 
 create table if not exists public.bookings (
@@ -545,16 +530,16 @@ create table if not exists public.bookings (
   client_id uuid references public.clients (id) on delete set null,
   guest_name text not null,
   guest_email text not null,
-  scheduled_at timestamptz not null,
-  duration_minutes integer not null check (duration_minutes between 5 and 480),
-  status text not null default 'confirmed'
-    check (status in ('confirmed', 'cancelled', 'completed')),
+  requested_date date not null,
+  requested_start_time time not null,
+  requested_end_time time not null,
+  status text not null default 'pending'
+    check (status in ('pending', 'confirmed', 'declined', 'cancelled', 'completed')),
   notes text,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  check (requested_end_time > requested_start_time)
 );
-create index if not exists idx_bookings_user_time on public.bookings (user_id, scheduled_at);
-create unique index if not exists uniq_bookings_confirmed_slot
-  on public.bookings (user_id, scheduled_at) where status = 'confirmed';
+create index if not exists idx_bookings_user on public.bookings (user_id, requested_date);
 
 alter table public.bookings enable row level security;
 drop policy if exists bookings_select_own on public.bookings;
@@ -571,36 +556,7 @@ drop policy if exists bookings_delete_own on public.bookings;
 create policy bookings_delete_own on public.bookings
   for delete to authenticated using ((select auth.uid()) = user_id);
 
--- Atomic replace of the caller's weekly availability (one transaction).
-create or replace function public.replace_availability(p_rules jsonb)
-returns void
-language plpgsql
-security invoker
-set search_path = public
-as $$
-declare
-  uid uuid := auth.uid();
-begin
-  if uid is null then
-    raise exception 'not authenticated' using errcode = 'insufficient_privilege';
-  end if;
-  delete from public.availability where user_id = uid;
-  insert into public.availability (
-    user_id, day_of_week, start_time, end_time, slot_duration_minutes, is_active
-  )
-  select
-    uid,
-    (r->>'day_of_week')::integer,
-    (r->>'start_time')::time,
-    (r->>'end_time')::time,
-    (r->>'slot_duration_minutes')::integer,
-    coalesce((r->>'is_active')::boolean, true)
-  from jsonb_array_elements(coalesce(p_rules, '[]'::jsonb)) as r;
-end;
-$$;
-grant execute on function public.replace_availability(jsonb) to authenticated;
-
--- Public booking RPCs (0010) — SECURITY DEFINER, slug-gated, anon-callable.
+-- Public booking RPCs — SECURITY DEFINER, slug-gated, anon-callable.
 create or replace function public.get_booking_page(p_slug text)
 returns json language plpgsql security definer set search_path = public as $$
 declare p record;
@@ -614,52 +570,28 @@ begin
 end; $$;
 grant execute on function public.get_booking_page(text) to anon, authenticated;
 
-create or replace function public.get_available_slots(p_slug text, p_from date, p_to date)
+create or replace function public.get_available_dates(p_slug text, p_from date, p_to date)
 returns json language plpgsql security definer set search_path = public as $$
 declare target uuid; tz text; result json;
 begin
   select id, coalesce(timezone, 'UTC') into target, tz
   from public.profiles where booking_slug = p_slug;
-  if target is null then return json_build_object('found', false, 'slots', '[]'::json); end if;
+  if target is null then return json_build_object('found', false, 'dates', '[]'::json); end if;
   if p_from is null or p_from < current_date then p_from := current_date; end if;
-  if p_from > current_date + 62 then return json_build_object('found', true, 'timezone', tz, 'slots', '[]'::json); end if;
-  if p_to is null or p_to > p_from + 62 then p_to := p_from + 62; end if;
-  with days as (
-    select d::date as day from generate_series(p_from, p_to, interval '1 day') as d
-  ),
-  rules as (
-    select day_of_week, start_time, end_time, slot_duration_minutes
-    from public.availability where user_id = target and is_active
-  ),
-  slots as (
-    select distinct ((days.day + (r.start_time + make_interval(mins => gs.min_off))) at time zone tz) as slot_utc,
-      r.slot_duration_minutes as duration
-    from days
-    join rules r on r.day_of_week = extract(dow from days.day)::int
-    cross join lateral generate_series(
-      0,
-      (extract(epoch from (r.end_time - r.start_time)) / 60)::int - r.slot_duration_minutes,
-      r.slot_duration_minutes
-    ) as gs(min_off)
-  )
-  select coalesce(
-    json_agg(json_build_object('start', slot_utc, 'duration', duration) order by slot_utc),
-    '[]'::json
-  ) into result
-  from slots
-  where slot_utc > now()
-    and not exists (
-      select 1 from public.bookings b
-      where b.user_id = target and b.status = 'confirmed' and b.scheduled_at = slots.slot_utc
-    );
-  return json_build_object('found', true, 'timezone', tz, 'slots', result);
+  if p_from > current_date + 366 then return json_build_object('found', true, 'timezone', tz, 'dates', '[]'::json); end if;
+  if p_to is null or p_to > p_from + 366 then p_to := p_from + 366; end if;
+  select coalesce(json_agg(d.date order by d.date), '[]'::json) into result
+  from public.available_dates d
+  where d.user_id = target and d.date between p_from and p_to;
+  return json_build_object('found', true, 'timezone', tz, 'dates', result);
 end; $$;
-grant execute on function public.get_available_slots(text, date, date) to anon, authenticated;
+grant execute on function public.get_available_dates(text, date, date) to anon, authenticated;
 
 create or replace function public.create_booking(
-  p_slug text, p_guest_name text, p_guest_email text, p_scheduled_at timestamptz, p_notes text
+  p_slug text, p_guest_name text, p_guest_email text,
+  p_requested_date date, p_start time, p_end time, p_notes text
 ) returns json language plpgsql security definer set search_path = public as $$
-declare target uuid; tz text; local_ts timestamp; dur integer; cid uuid;
+declare target uuid; cid uuid;
 begin
   if p_guest_name is null or length(btrim(p_guest_name)) = 0 then
     return json_build_object('status', 'bad_input', 'message', 'Please enter your name.');
@@ -667,45 +599,34 @@ begin
   if p_guest_email is null or p_guest_email !~ '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$' then
     return json_build_object('status', 'bad_input', 'message', 'Please enter a valid email.');
   end if;
-  if p_scheduled_at is null then return json_build_object('status', 'invalid_slot'); end if;
-  p_scheduled_at := date_trunc('minute', p_scheduled_at); -- canonicalize (see 0010)
-  select id, coalesce(timezone, 'UTC') into target, tz
-  from public.profiles where booking_slug = p_slug;
-  if target is null then return json_build_object('status', 'not_found'); end if;
-  if p_scheduled_at <= now() or p_scheduled_at > now() + interval '62 days' then
-    return json_build_object('status', 'invalid_slot');
+  if p_requested_date is null or p_start is null or p_end is null or p_end <= p_start then
+    return json_build_object('status', 'invalid_request');
   end if;
-  local_ts := p_scheduled_at at time zone tz;
-  select a.slot_duration_minutes into dur
-  from public.availability a
-  where a.user_id = target and a.is_active
-    and a.day_of_week = extract(dow from local_ts)::int
-    and local_ts::time >= a.start_time
-    and mod(extract(epoch from (local_ts::time - a.start_time))::int, a.slot_duration_minutes * 60) = 0
-    and extract(epoch from (local_ts::time - a.start_time)) + a.slot_duration_minutes * 60
-        <= extract(epoch from (a.end_time - a.start_time))
-  limit 1;
-  if not found then return json_build_object('status', 'invalid_slot'); end if;
+  select id into target from public.profiles where booking_slug = p_slug;
+  if target is null then return json_build_object('status', 'not_found'); end if;
+  if p_requested_date < current_date then return json_build_object('status', 'invalid_request'); end if;
+  if not exists (
+    select 1 from public.available_dates d where d.user_id = target and d.date = p_requested_date
+  ) then
+    return json_build_object('status', 'date_unavailable');
+  end if;
   select id into cid from public.clients
   where user_id = target and lower(email) = lower(btrim(p_guest_email)) and not is_archived limit 1;
-  begin
-    insert into public.bookings (
-      user_id, client_id, guest_name, guest_email, scheduled_at, duration_minutes, status, notes
-    ) values (
-      target, cid, btrim(p_guest_name), lower(btrim(p_guest_email)), p_scheduled_at, dur, 'confirmed',
-      nullif(btrim(coalesce(p_notes, '')), '')
-    );
-  exception when unique_violation then
-    return json_build_object('status', 'taken');
-  end;
-  return json_build_object('status', 'ok', 'scheduled_at', p_scheduled_at, 'duration', dur);
+  insert into public.bookings (
+    user_id, client_id, guest_name, guest_email,
+    requested_date, requested_start_time, requested_end_time, status, notes
+  ) values (
+    target, cid, btrim(p_guest_name), lower(btrim(p_guest_email)),
+    p_requested_date, p_start, p_end, 'pending', nullif(btrim(coalesce(p_notes, '')), '')
+  );
+  return json_build_object('status', 'ok');
 end; $$;
-grant execute on function public.create_booking(text, text, text, timestamptz, text) to anon, authenticated;
+grant execute on function public.create_booking(text, text, text, date, time, time, text) to anon, authenticated;
 
 -- =============================================================================
 -- Done. Tables: profiles, clients, invoices, payments, payment_methods,
--- user_settings, availability, bookings (all RLS-protected, scoped TO
+-- user_settings, available_dates, bookings (all RLS-protected, scoped TO
 -- authenticated). Client-owner trigger on invoices + payments. Public booking
--- RPCs: get_booking_page / get_available_slots / create_booking (0010).
+-- RPCs: get_booking_page / get_available_dates / create_booking (0012).
 -- Logo storage: see 0005b_logos_storage.sql.
 -- =============================================================================

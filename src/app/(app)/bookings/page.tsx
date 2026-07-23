@@ -18,7 +18,7 @@ export default async function BookingsPage() {
         description="Calls booked through your public link."
       >
         <Link
-          href="/settings/scheduling"
+          href="/availability"
           className="inline-flex h-8 items-center justify-center rounded-md border border-border bg-transparent px-3 text-xs font-medium text-foreground transition-colors hover:bg-secondary"
         >
           Manage availability

@@ -39,6 +39,7 @@ export const NAV: NavItem[] = [
   { href: "/invoices", label: "Invoices", Icon: FileText },
   { href: "/income", label: "Income", Icon: TrendingUp },
   { href: "/clients", label: "Clients", Icon: Users },
+  { href: "/availability", label: "Availability", Icon: CalendarClock },
   { href: "/bookings", label: "Bookings", Icon: CalendarCheck },
   { href: "/reports", label: "Reports", Icon: BarChart3 },
   {
@@ -63,7 +64,6 @@ export const NAV: NavItem[] = [
       { href: "/settings/profile", label: "Profile", Icon: User },
       { href: "/settings/notifications", label: "Notifications", Icon: Bell },
       { href: "/settings/appearance", label: "Appearance", Icon: Paintbrush },
-      { href: "/settings/scheduling", label: "Scheduling", Icon: CalendarClock },
       { href: "/settings/security", label: "Security", Icon: Shield },
       { href: "/settings/integrations", label: "Integrations", Icon: Plug },
     ],
