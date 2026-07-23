@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Wordmark } from "@/components/brand";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { UserMenu } from "@/components/app/user-menu";
 import { NAV_FLAT } from "@/components/app/nav-items";
 import { cn } from "@/lib/utils";
@@ -18,11 +17,8 @@ export function MobileTopBar({
       <Link href="/dashboard">
         <Wordmark size={28} />
       </Link>
-      <div className="flex items-center gap-2">
-        <ThemeToggle />
-        <div className="w-44">
-          <UserMenu name={user.name} email={user.email} align="down" />
-        </div>
+      <div className="w-44">
+        <UserMenu name={user.name} email={user.email} align="down" />
       </div>
     </header>
   );
