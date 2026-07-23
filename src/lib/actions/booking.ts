@@ -90,6 +90,26 @@ export async function saveBookingSettings(
   }
 }
 
+/** Set the max bookings allowed per available date (1–50). */
+export async function saveMaxBookingsPerDay(n: number): Promise<ActionResult> {
+  try {
+    const user = await requireUser();
+    const supabase = await createClient();
+    const cap = Math.round(Number(n));
+    if (!Number.isFinite(cap) || cap < 1 || cap > 50)
+      return { error: "Max bookings per day must be between 1 and 50." };
+    const { error } = await supabase
+      .from("profiles")
+      .update({ max_bookings_per_day: cap })
+      .eq("id", user.id);
+    if (error) return { error: error.message };
+    revalidatePath("/availability");
+    return { ok: true };
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+}
+
 /** Update a booking's status (RLS scopes it to the owner). Emails: a follow-up. */
 async function setBookingStatus(
   id: string,

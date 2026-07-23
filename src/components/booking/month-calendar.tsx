@@ -18,11 +18,14 @@ export function MonthCalendar({
   isDisabled,
   selectedDate,
   onSelect,
+  dayInfo,
 }: {
   marked?: Set<string>;
   isDisabled?: (dateStr: string) => boolean;
   selectedDate?: string | null;
   onSelect: (dateStr: string) => void;
+  /** Per-date booking count vs cap; colors the cell + shows "count/cap". */
+  dayInfo?: (dateStr: string) => { count: number; cap: number } | null;
 }) {
   const today = new Date();
   const todayKey = keyOf(today.getFullYear(), today.getMonth(), today.getDate());
@@ -83,6 +86,19 @@ export function MonthCalendar({
           const disabled = past || (isDisabled ? isDisabled(ds) : false);
           const isMarked = marked?.has(ds) ?? false;
           const isSel = selectedDate === ds;
+          const info = !disabled && isMarked && dayInfo ? dayInfo(ds) : null;
+          // Color by booking state when we have counts (freelancer view).
+          const stateCls = info
+            ? info.count >= info.cap
+              ? "bg-destructive/15 text-destructive" // full
+              : info.count > 0
+                ? "bg-warning/15 text-warning" // partially booked
+                : "bg-success/15 text-success" // open
+            : !disabled && isMarked
+              ? "bg-primary/15 font-semibold text-primary"
+              : !disabled
+                ? "hover:bg-secondary"
+                : "";
           return (
             <button
               key={ds}
@@ -91,15 +107,19 @@ export function MonthCalendar({
               onClick={() => onSelect(ds)}
               aria-pressed={isMarked}
               className={cn(
-                "flex aspect-square items-center justify-center rounded-md text-sm transition-colors",
+                "flex aspect-square flex-col items-center justify-center rounded-md text-sm leading-none transition-colors",
                 disabled && "cursor-not-allowed text-muted-foreground/40",
-                !disabled && isMarked && "bg-primary/15 font-semibold text-primary",
-                !disabled && !isMarked && "hover:bg-secondary",
+                stateCls,
                 isSel && "ring-2 ring-primary ring-offset-1 ring-offset-background",
                 !disabled && ds === todayKey && !isMarked && "font-bold",
               )}
             >
-              {d}
+              <span>{d}</span>
+              {info && (
+                <span className="mt-0.5 text-[10px] font-medium tabular-nums">
+                  {info.count}/{info.cap}
+                </span>
+              )}
             </button>
           );
         })}

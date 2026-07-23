@@ -22,6 +22,8 @@ export interface Profile {
   booking_slug: string | null;
   /** IANA timezone anchoring the user's availability (e.g. "America/Los_Angeles"). */
   timezone: string;
+  /** Max pending+confirmed bookings allowed on any single available date. */
+  max_bookings_per_day: number;
   created_at: string;
   updated_at: string;
 }
@@ -249,6 +251,8 @@ export interface Booking {
   client_id: string | null;
   guest_name: string;
   guest_email: string;
+  /** Booked calendar date (YYYY-MM-DD); links to available_dates. */
+  requested_date: string;
   requested_start_at: string; // ISO timestamptz (UTC)
   requested_end_at: string; // ISO timestamptz (UTC)
   /** IANA timezone the guest booked in (null for pre-0013 rows). */

@@ -16,7 +16,12 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
 import { MonthCalendar } from "@/components/booking/month-calendar";
-import { saveBookingSettings, toggleAvailableDate } from "@/lib/actions/booking";
+import { Minus, Plus } from "lucide-react";
+import {
+  saveBookingSettings,
+  saveMaxBookingsPerDay,
+  toggleAvailableDate,
+} from "@/lib/actions/booking";
 import type { Profile } from "@/lib/types";
 
 function timezoneList(current: string): string[] {
@@ -38,12 +43,31 @@ function timezoneList(current: string): string[] {
 export function AvailabilityClient({
   profile,
   initialDates,
+  counts,
+  maxPerDay,
 }: {
   profile: Profile | null;
   initialDates: string[];
+  /** pending+confirmed booking count per date (YYYY-MM-DD). */
+  counts: Record<string, number>;
+  maxPerDay: number;
 }) {
   const router = useRouter();
   const { toast } = useToast();
+  const [cap, setCap] = useState(maxPerDay);
+
+  async function changeCap(next: number) {
+    if (next < 1 || next > 50) return;
+    const prev = cap;
+    setCap(next); // optimistic
+    const res = await saveMaxBookingsPerDay(next);
+    if ("error" in res) {
+      setCap(prev);
+      toast(res.error, "error");
+    } else {
+      toast("Daily limit updated");
+    }
+  }
 
   const browserTz = useMemo(() => {
     try {
@@ -181,8 +205,65 @@ export function AvailabilityClient({
             marked dates. ({marked.size} marked)
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <MonthCalendar marked={marked} onSelect={toggle} />
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-border p-3">
+            <div>
+              <p className="text-sm font-medium">Max bookings per day</p>
+              <p className="text-xs text-muted-foreground">
+                Applies to every available date.
+              </p>
+            </div>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => changeCap(cap - 1)}
+                disabled={cap <= 1}
+                aria-label="Decrease"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-input text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
+              >
+                <Minus className="h-4 w-4" />
+              </button>
+              <input
+                type="number"
+                min={1}
+                max={50}
+                value={cap}
+                onChange={(e) => {
+                  const v = parseInt(e.target.value || "0", 10);
+                  if (!Number.isNaN(v)) changeCap(Math.min(50, Math.max(1, v)));
+                }}
+                aria-label="Max bookings per day"
+                className="h-8 w-12 rounded-md border border-input bg-background text-center text-sm tabular-nums"
+              />
+              <button
+                type="button"
+                onClick={() => changeCap(cap + 1)}
+                disabled={cap >= 50}
+                aria-label="Increase"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-input text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+
+          <MonthCalendar
+            marked={marked}
+            onSelect={toggle}
+            dayInfo={(ds) => (marked.has(ds) ? { count: counts[ds] ?? 0, cap } : null)}
+          />
+
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+            <span className="inline-flex items-center gap-1.5">
+              <span className="h-3 w-3 rounded bg-success/40" /> Open
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="h-3 w-3 rounded bg-warning/40" /> Partially booked
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="h-3 w-3 rounded bg-destructive/40" /> Full
+            </span>
+          </div>
         </CardContent>
       </Card>
     </div>

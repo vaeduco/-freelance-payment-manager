@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { CalendarClock, Check, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -46,6 +46,21 @@ export function PublicBooking({ slug }: { slug: string }) {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
+  // Load selectable dates (the server already excludes past + full dates).
+  const loadDates = useCallback(async () => {
+    const today = new Date();
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const dk = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    // Full window the server serves (clamped to 366 days).
+    const to = new Date(today.getTime() + 366 * 86_400_000);
+    const { data } = await supabase.rpc("get_available_dates", {
+      p_slug: slug,
+      p_from: dk(today),
+      p_to: dk(to),
+    });
+    setDates(new Set((data?.dates ?? []) as string[]));
+  }, [slug, supabase]);
+
   useEffect(() => {
     (async () => {
       const { data, error } = await supabase.rpc("get_booking_page", { p_slug: slug });
@@ -54,22 +69,11 @@ export function PublicBooking({ slug }: { slug: string }) {
         return;
       }
       setDisplayName(data.display_name as string);
-      const today = new Date();
-      const pad = (n: number) => String(n).padStart(2, "0");
-      const dk = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-      // Fetch the full window the server will serve (get_available_dates clamps
-      // to 366 days), so every selectable date the calendar can reach is loaded.
-      const to = new Date(today.getTime() + 366 * 86_400_000);
-      const { data: dd } = await supabase.rpc("get_available_dates", {
-        p_slug: slug,
-        p_from: dk(today),
-        p_to: dk(to),
-      });
-      setDates(new Set((dd?.dates ?? []) as string[]));
+      await loadDates();
       setPhase("ready");
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slug]);
+  }, [slug, loadDates]);
 
   async function submit() {
     if (!selectedDate) return;
@@ -103,9 +107,16 @@ export function PublicBooking({ slug }: { slug: string }) {
       setFormError((data?.message as string) ?? "Please check your details.");
       return;
     }
+    if (status === "date_full") {
+      setFormError("This date just got fully booked — please pick another.");
+      setSelectedDate(null);
+      await loadDates();
+      return;
+    }
     if (status === "date_unavailable") {
       setFormError("That date isn't available anymore. Please pick another.");
       setSelectedDate(null);
+      await loadDates();
       return;
     }
     setFormError("That request isn't valid. Please try a different date or time.");
