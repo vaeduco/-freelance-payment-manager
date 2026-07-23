@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Loader2, Lock, ShieldAlert } from "lucide-react";
+import { CalendarClock, Loader2, Lock, ShieldAlert } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,6 +38,7 @@ function mapInvoice(raw: Record<string, unknown>) {
     invoiceNumber: `INV-${String((raw.invoice_seq as number) ?? 0).padStart(4, "0")}`,
     businessName: ((raw.business_name as string) ?? "").trim() || "Invoice",
     currency: (raw.currency as string) ?? "USD",
+    bookingSlug: ((raw.booking_slug as string) ?? "").trim() || null,
   };
 }
 
@@ -192,6 +193,17 @@ export function PublicSharedInvoice({ token }: { token: string }) {
             />
           )}
         </div>
+        {doc?.bookingSlug && (
+          <div className="mt-4 flex justify-center">
+            <a
+              href={`/book/${doc.bookingSlug}`}
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+            >
+              <CalendarClock className="h-4 w-4" />
+              Book a call with {doc.businessName}
+            </a>
+          </div>
+        )}
         <p className="mt-4 text-center text-xs text-slate-400">
           Powered by FreelanceFlow
         </p>

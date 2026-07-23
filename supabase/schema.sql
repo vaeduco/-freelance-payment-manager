@@ -449,6 +449,7 @@ begin
     'payment_method', (select json_build_object('name', pm.name, 'account_name', pm.account_name, 'details', pm.details, 'payment_link', pm.payment_link)
                        from public.payment_methods pm where pm.id = inv.payment_method_id),
     'business_name', (select p.business_name from public.profiles p where p.id = inv.user_id),
+    'booking_slug', (select p.booking_slug from public.profiles p where p.id = inv.user_id),
     'currency', coalesce((select p.currency from public.profiles p where p.id = inv.user_id), 'USD')));
 end; $$;
 grant execute on function public.open_shared_link(uuid, text) to anon, authenticated;
