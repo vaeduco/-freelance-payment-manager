@@ -38,8 +38,7 @@ export async function getBookings(): Promise<BookingWithClient[]> {
     .from("bookings")
     .select("*, client:clients(id, name)")
     .eq("user_id", user.id)
-    .order("requested_date", { ascending: false })
-    .order("requested_start_time", { ascending: false });
+    .order("requested_start_at", { ascending: false });
 
   return (data ?? []) as unknown as BookingWithClient[];
 }

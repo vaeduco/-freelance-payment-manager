@@ -249,9 +249,10 @@ export interface Booking {
   client_id: string | null;
   guest_name: string;
   guest_email: string;
-  requested_date: string; // YYYY-MM-DD
-  requested_start_time: string; // HH:MM:SS
-  requested_end_time: string; // HH:MM:SS
+  requested_start_at: string; // ISO timestamptz (UTC)
+  requested_end_at: string; // ISO timestamptz (UTC)
+  /** IANA timezone the guest booked in (null for pre-0013 rows). */
+  client_timezone: string | null;
   status: BookingStatus;
   notes: string | null;
   created_at: string;

@@ -22,7 +22,7 @@ create table if not exists public.profiles (
   onboarded_at timestamptz,
   password_checked_at timestamptz,      -- last clean HIBP breach check (0007a)
   booking_slug text,                    -- public booking handle (0009); partial-unique below
-  timezone text not null default 'UTC', -- IANA tz anchoring availability (0009)
+  timezone text not null default 'Asia/Manila', -- freelancer's IANA tz (0009; default 0013)
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -530,16 +530,16 @@ create table if not exists public.bookings (
   client_id uuid references public.clients (id) on delete set null,
   guest_name text not null,
   guest_email text not null,
-  requested_date date not null,
-  requested_start_time time not null,
-  requested_end_time time not null,
+  requested_start_at timestamptz not null,
+  requested_end_at timestamptz not null,
+  client_timezone text,                 -- IANA tz the guest booked in (0013)
   status text not null default 'pending'
     check (status in ('pending', 'confirmed', 'declined', 'cancelled', 'completed')),
   notes text,
   created_at timestamptz not null default now(),
-  check (requested_end_time > requested_start_time)
+  constraint bookings_time_order check (requested_end_at > requested_start_at)
 );
-create index if not exists idx_bookings_user on public.bookings (user_id, requested_date);
+create index if not exists idx_bookings_user_start on public.bookings (user_id, requested_start_at);
 
 alter table public.bookings enable row level security;
 drop policy if exists bookings_select_own on public.bookings;
@@ -589,9 +589,9 @@ grant execute on function public.get_available_dates(text, date, date) to anon, 
 
 create or replace function public.create_booking(
   p_slug text, p_guest_name text, p_guest_email text,
-  p_requested_date date, p_start time, p_end time, p_notes text
+  p_requested_date date, p_start time, p_end time, p_client_timezone text, p_notes text
 ) returns json language plpgsql security definer set search_path = public as $$
-declare target uuid; cid uuid;
+declare target uuid; cid uuid; start_at timestamptz; end_at timestamptz;
 begin
   if p_guest_name is null or length(btrim(p_guest_name)) = 0 then
     return json_build_object('status', 'bad_input', 'message', 'Please enter your name.');
@@ -602,26 +602,32 @@ begin
   if p_requested_date is null or p_start is null or p_end is null or p_end <= p_start then
     return json_build_object('status', 'invalid_request');
   end if;
+  if p_client_timezone is null
+     or not exists (select 1 from pg_timezone_names where name = p_client_timezone) then
+    return json_build_object('status', 'bad_input', 'message', 'Unrecognized timezone.');
+  end if;
   select id into target from public.profiles where booking_slug = p_slug;
   if target is null then return json_build_object('status', 'not_found'); end if;
-  if p_requested_date < current_date then return json_build_object('status', 'invalid_request'); end if;
   if not exists (
     select 1 from public.available_dates d where d.user_id = target and d.date = p_requested_date
   ) then
     return json_build_object('status', 'date_unavailable');
   end if;
+  start_at := (p_requested_date + p_start) at time zone p_client_timezone;
+  end_at := (p_requested_date + p_end) at time zone p_client_timezone;
+  if start_at <= now() then return json_build_object('status', 'invalid_request'); end if;
   select id into cid from public.clients
   where user_id = target and lower(email) = lower(btrim(p_guest_email)) and not is_archived limit 1;
   insert into public.bookings (
     user_id, client_id, guest_name, guest_email,
-    requested_date, requested_start_time, requested_end_time, status, notes
+    requested_start_at, requested_end_at, client_timezone, status, notes
   ) values (
     target, cid, btrim(p_guest_name), lower(btrim(p_guest_email)),
-    p_requested_date, p_start, p_end, 'pending', nullif(btrim(coalesce(p_notes, '')), '')
+    start_at, end_at, p_client_timezone, 'pending', nullif(btrim(coalesce(p_notes, '')), '')
   );
   return json_build_object('status', 'ok');
 end; $$;
-grant execute on function public.create_booking(text, text, text, date, time, time, text) to anon, authenticated;
+grant execute on function public.create_booking(text, text, text, date, time, time, text, text) to anon, authenticated;
 
 -- =============================================================================
 -- Done. Tables: profiles, clients, invoices, payments, payment_methods,

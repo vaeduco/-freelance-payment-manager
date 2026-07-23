@@ -25,10 +25,17 @@ function prettyDate(dateStr: string) {
 
 export function PublicBooking({ slug }: { slug: string }) {
   const supabase = useMemo(() => createClient(), []);
+  // The visitor's own timezone — times are picked and shown in this zone.
+  const visitorTz = useMemo(() => {
+    try {
+      return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+    } catch {
+      return "UTC";
+    }
+  }, []);
 
   const [phase, setPhase] = useState<Phase>("loading");
   const [displayName, setDisplayName] = useState("");
-  const [tz, setTz] = useState("UTC");
   const [dates, setDates] = useState<Set<string>>(new Set());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [startTime, setStartTime] = useState("09:00");
@@ -47,7 +54,6 @@ export function PublicBooking({ slug }: { slug: string }) {
         return;
       }
       setDisplayName(data.display_name as string);
-      setTz((data.timezone as string) || "UTC");
       const today = new Date();
       const pad = (n: number) => String(n).padStart(2, "0");
       const dk = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -80,6 +86,7 @@ export function PublicBooking({ slug }: { slug: string }) {
       p_requested_date: selectedDate,
       p_start: startTime,
       p_end: endTime,
+      p_client_timezone: visitorTz,
       p_notes: notes,
     });
     setSubmitting(false);
@@ -141,7 +148,7 @@ export function PublicBooking({ slug }: { slug: string }) {
             {selectedDate && prettyDate(selectedDate)} · {startTime}–{endTime}
           </p>
           <p className="text-xs text-muted-foreground">
-            Times are in {tz}. You&apos;ll hear back once {displayName} confirms.
+            Times are in {visitorTz}. You&apos;ll hear back once {displayName} confirms.
           </p>
         </CardContent>
       </Card>
@@ -159,7 +166,7 @@ export function PublicBooking({ slug }: { slug: string }) {
             Request a call with {displayName}
           </h1>
           <p className="text-sm text-muted-foreground">
-            Pick an available date — all times are in {tz}.
+            Pick an available date — all times are in {visitorTz}.
           </p>
         </div>
       </div>
@@ -188,7 +195,7 @@ export function PublicBooking({ slug }: { slug: string }) {
                 <p className="text-sm font-medium">{prettyDate(selectedDate)}</p>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <Label htmlFor="bk-start">Start ({tz})</Label>
+                    <Label htmlFor="bk-start">Start ({visitorTz})</Label>
                     <input
                       id="bk-start"
                       type="time"
@@ -198,7 +205,7 @@ export function PublicBooking({ slug }: { slug: string }) {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="bk-end">End ({tz})</Label>
+                    <Label htmlFor="bk-end">End ({visitorTz})</Label>
                     <input
                       id="bk-end"
                       type="time"

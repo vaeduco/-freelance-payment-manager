@@ -34,15 +34,32 @@ const SECTIONS: { status: BookingStatus; label: string }[] = [
   { status: "cancelled", label: "Cancelled" },
 ];
 
-const hhmm = (t: string) => t.slice(0, 5);
-function prettyDate(dateStr: string) {
-  const [y, m, d] = dateStr.split("-").map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString([], {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+/**
+ * Format a UTC start/end range in a given IANA timezone (native Intl). Falls
+ * back to UTC if the timezone name isn't recognized by the JS/ICU tz set — a
+ * booking's client_timezone comes from a public write and Postgres accepts some
+ * names (e.g. "Factory") that Intl rejects, which would otherwise throw here.
+ */
+function fmtRange(startISO: string, endISO: string, tz: string) {
+  const s = new Date(startISO);
+  const e = new Date(endISO);
+  const build = (zone: string) => {
+    const date = s.toLocaleDateString("en-US", {
+      timeZone: zone,
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+    });
+    const t = (d: Date) =>
+      d.toLocaleTimeString("en-US", { timeZone: zone, hour: "numeric", minute: "2-digit" });
+    return { date, range: `${t(s)}–${t(e)}` };
+  };
+  try {
+    return build(tz);
+  } catch {
+    const r = build("UTC");
+    return { date: r.date, range: `${r.range} UTC` };
+  }
 }
 
 export function BookingsClient({
@@ -87,6 +104,11 @@ export function BookingsClient({
   }
 
   function Row({ b }: { b: BookingWithClient }) {
+    const primary = fmtRange(b.requested_start_at, b.requested_end_at, timezone);
+    const clientView =
+      b.client_timezone && b.client_timezone !== timezone
+        ? fmtRange(b.requested_start_at, b.requested_end_at, b.client_timezone)
+        : null;
     return (
       <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
         <div className="min-w-0 flex-1">
@@ -106,14 +128,19 @@ export function BookingsClient({
           <div className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
             <span className="inline-flex items-center gap-1">
               <Clock className="h-3.5 w-3.5" />
-              {prettyDate(b.requested_date)} · {hhmm(b.requested_start_time)}–
-              {hhmm(b.requested_end_time)} ({timezone})
+              {primary.date} · {primary.range}
+              <span className="text-muted-foreground/70">your time ({timezone})</span>
             </span>
             <span className="inline-flex items-center gap-1">
               <Mail className="h-3.5 w-3.5" />
               {b.guest_email}
             </span>
           </div>
+          {clientView && (
+            <p className="mt-0.5 text-xs text-muted-foreground/80">
+              {clientView.range} their time ({b.client_timezone})
+            </p>
+          )}
           {b.notes && <p className="mt-1 text-xs text-muted-foreground">“{b.notes}”</p>}
         </div>
 
