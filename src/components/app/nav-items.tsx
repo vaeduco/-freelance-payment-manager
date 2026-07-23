@@ -3,6 +3,7 @@ import {
   FileText,
   TrendingUp,
   Users,
+  CalendarCheck,
   Calculator,
   BarChart3,
   Wallet,
@@ -38,6 +39,7 @@ export const NAV: NavItem[] = [
   { href: "/invoices", label: "Invoices", Icon: FileText },
   { href: "/income", label: "Income", Icon: TrendingUp },
   { href: "/clients", label: "Clients", Icon: Users },
+  { href: "/bookings", label: "Bookings", Icon: CalendarCheck },
   { href: "/reports", label: "Reports", Icon: BarChart3 },
   {
     href: "/tax",

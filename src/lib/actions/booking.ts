@@ -80,6 +80,33 @@ export async function saveAvailability(
   }
 }
 
+/** Set a booking's status (cancel / mark completed). RLS scopes it to the owner. */
+async function setBookingStatus(
+  id: string,
+  status: "cancelled" | "completed",
+): Promise<ActionResult> {
+  try {
+    await requireUser();
+    const supabase = await createClient();
+    const { error } = await supabase
+      .from("bookings")
+      .update({ status })
+      .eq("id", id);
+    if (error) return { error: error.message };
+    revalidatePath("/bookings");
+    return { ok: true };
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+}
+
+export async function cancelBooking(id: string): Promise<ActionResult> {
+  return setBookingStatus(id, "cancelled");
+}
+export async function completeBooking(id: string): Promise<ActionResult> {
+  return setBookingStatus(id, "completed");
+}
+
 /**
  * Save the public booking handle + timezone on the profile. The slug is
  * normalized + format-checked; a taken slug surfaces a friendly error via the
