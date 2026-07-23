@@ -16,6 +16,8 @@ const PUBLIC_PATHS = [
   "/privacy",
   // Public secure-share invoice view (token + optional password, via RPC).
   "/s",
+  // Public booking page (slug-gated, via RPCs).
+  "/book",
 ];
 
 function isPublic(pathname: string) {
