@@ -115,6 +115,10 @@ export default async function DashboardPage() {
     client_breakdown: <ClientBreakdown data={clientSlices} currency={currency} />,
   };
 
+  // Income + Calendar are pinned in the left column; the remaining widgets fill
+  // the right column in the user's saved order (Settings → Appearance).
+  const rightOrder = settings.dashboard_widget_order.filter((k) => k !== "income");
+
   return (
     <div>
       <PageHeader title="Dashboard" description={`Welcome back, ${firstName}`}>
@@ -158,13 +162,17 @@ export default async function DashboardPage() {
       </div>
 
       <div className="mt-6 grid items-start gap-6 lg:grid-cols-2">
-        {settings.dashboard_widget_order.map((key) => (
-          <Fragment key={key}>{widgets[key]}</Fragment>
-        ))}
-      </div>
-
-      <div className="mt-6 w-full max-w-[344px]">
-        <DashboardCalendar events={calendarEvents} />
+        {/* Left column: Income chart with the Calendar directly beneath it. */}
+        <div className="space-y-6">
+          {widgets.income}
+          <DashboardCalendar events={calendarEvents} />
+        </div>
+        {/* Right column: the remaining widgets, in the user's saved order. */}
+        <div className="space-y-6">
+          {rightOrder.map((key) => (
+            <Fragment key={key}>{widgets[key]}</Fragment>
+          ))}
+        </div>
       </div>
     </div>
   );
