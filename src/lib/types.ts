@@ -213,15 +213,7 @@ export interface UserSettings {
   number_format: NumberFormatPref;
   default_currency: string;
   show_both_currencies: boolean;
-  dashboard_widget_order: DashboardWidgetKey[];
 }
-
-export const DEFAULT_DASHBOARD_WIDGET_ORDER: DashboardWidgetKey[] = [
-  "income",
-  "needs_attention",
-  "recent_payments",
-  "client_breakdown",
-];
 
 export const DEFAULT_USER_SETTINGS: UserSettings = {
   theme: "system",
@@ -232,16 +224,7 @@ export const DEFAULT_USER_SETTINGS: UserSettings = {
   number_format: "1,000.00",
   default_currency: "USD",
   show_both_currencies: false,
-  dashboard_widget_order: DEFAULT_DASHBOARD_WIDGET_ORDER,
 };
-
-/** Reorderable dashboard widgets (key -> display label), in default order. */
-export const DASHBOARD_WIDGETS: { key: DashboardWidgetKey; label: string }[] = [
-  { key: "income", label: "Income overview" },
-  { key: "needs_attention", label: "Needs attention" },
-  { key: "recent_payments", label: "Recent payments" },
-  { key: "client_breakdown", label: "Client breakdown" },
-];
 
 // ---------------------------------------------------------------------------
 // Booking / scheduling module (0009)

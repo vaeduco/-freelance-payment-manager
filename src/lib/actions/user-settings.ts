@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/auth";
-import { normalizeWidgetOrder } from "@/lib/data/user-settings";
 import { DEFAULT_USER_SETTINGS, type UserSettings } from "@/lib/types";
 
 type ActionResult = { ok: true } | { error: string };
@@ -53,7 +52,6 @@ export async function saveUserSettings(input: UserSettings): Promise<ActionResul
       number_format: coerce("number_format", input.number_format),
       default_currency: currency,
       show_both_currencies: Boolean(input.show_both_currencies),
-      dashboard_widget_order: normalizeWidgetOrder(input.dashboard_widget_order),
     };
 
     const { error } = await supabase

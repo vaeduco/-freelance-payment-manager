@@ -3,15 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
-import {
-  ArrowDown,
-  ArrowUp,
-  GripVertical,
-  Monitor,
-  Moon,
-  Sun,
-  type LucideIcon,
-} from "lucide-react";
+import { Monitor, Moon, Sun, type LucideIcon } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -29,8 +21,6 @@ import { saveUserSettings } from "@/lib/actions/user-settings";
 import { CURRENCIES } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import {
-  DASHBOARD_WIDGETS,
-  type DashboardWidgetKey,
   type DateFormatPref,
   type Density,
   type FontSize,
@@ -51,10 +41,6 @@ const FONT_OPTIONS: { value: FontSize; label: string; sample: string }[] = [
   { value: "medium", label: "Medium", sample: "text-sm" },
   { value: "large", label: "Large", sample: "text-base" },
 ];
-
-const WIDGET_LABELS: Record<DashboardWidgetKey, string> = Object.fromEntries(
-  DASHBOARD_WIDGETS.map((w) => [w.key, w.label]),
-) as Record<DashboardWidgetKey, string>;
 
 /** Selectable card used for Theme + Font size. */
 function OptionCard({
@@ -101,11 +87,7 @@ export function AppearanceClient({ initial }: { initial: UserSettings }) {
   );
   const [currency, setCurrency] = useState(initial.default_currency);
   const [showBoth, setShowBoth] = useState(initial.show_both_currencies);
-  const [order, setOrder] = useState<DashboardWidgetKey[]>(
-    initial.dashboard_widget_order,
-  );
   const [busy, setBusy] = useState(false);
-  const [dragIndex, setDragIndex] = useState<number | null>(null);
 
   // --- live-applied prefs -------------------------------------------------
   function pickTheme(next: ThemePref) {
@@ -125,17 +107,6 @@ export function AppearanceClient({ initial }: { initial: UserSettings }) {
     setLocal({ sidebarDefault: next });
   }
 
-  // --- widget reordering --------------------------------------------------
-  function move(from: number, to: number) {
-    if (to < 0 || to >= order.length) return;
-    setOrder((prev) => {
-      const next = [...prev];
-      const [m] = next.splice(from, 1);
-      next.splice(to, 0, m);
-      return next;
-    });
-  }
-
   async function save() {
     setBusy(true);
     const payload: UserSettings = {
@@ -147,7 +118,6 @@ export function AppearanceClient({ initial }: { initial: UserSettings }) {
       number_format: numberFormat,
       default_currency: currency,
       show_both_currencies: showBoth,
-      dashboard_widget_order: order,
     };
     const res = await saveUserSettings(payload);
     setBusy(false);
@@ -325,67 +295,6 @@ export function AppearanceClient({ initial }: { initial: UserSettings }) {
               </span>
             </span>
           </label>
-        </CardContent>
-      </Card>
-
-      {/* Dashboard widget order */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Dashboard widget order</CardTitle>
-          <CardDescription>
-            Drag to reorder, or use the arrows. This sets the order on your
-            dashboard.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ul className="space-y-2">
-            {order.map((key, i) => (
-              <li
-                key={key}
-                draggable
-                onDragStart={() => setDragIndex(i)}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  if (dragIndex === null || dragIndex === i) return;
-                  move(dragIndex, i);
-                  setDragIndex(i);
-                }}
-                onDragEnd={() => setDragIndex(null)}
-                className={cn(
-                  "flex items-center gap-3 rounded-lg border border-border bg-background px-3 py-2.5 transition-colors",
-                  dragIndex === i ? "border-primary bg-primary/5" : "hover:bg-secondary",
-                )}
-              >
-                <GripVertical
-                  className="h-4 w-4 shrink-0 cursor-grab text-muted-foreground"
-                  aria-hidden
-                />
-                <span className="flex-1 text-sm font-medium">
-                  {WIDGET_LABELS[key]}
-                </span>
-                <span className="flex shrink-0 items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => move(i, i - 1)}
-                    disabled={i === 0}
-                    aria-label={`Move ${WIDGET_LABELS[key]} up`}
-                    className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
-                  >
-                    <ArrowUp className="h-4 w-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => move(i, i + 1)}
-                    disabled={i === order.length - 1}
-                    aria-label={`Move ${WIDGET_LABELS[key]} down`}
-                    className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
-                  >
-                    <ArrowDown className="h-4 w-4" />
-                  </button>
-                </span>
-              </li>
-            ))}
-          </ul>
         </CardContent>
       </Card>
 

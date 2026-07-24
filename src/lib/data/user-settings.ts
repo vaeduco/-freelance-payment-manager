@@ -1,33 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import {
-  DEFAULT_USER_SETTINGS,
-  DEFAULT_DASHBOARD_WIDGET_ORDER,
-  type DashboardWidgetKey,
-  type UserSettings,
-} from "@/lib/types";
-
-const VALID_WIDGETS = new Set<DashboardWidgetKey>(DEFAULT_DASHBOARD_WIDGET_ORDER);
-
-/**
- * Normalize a stored widget-order array: keep only known keys (deduped, in the
- * user's order) and append any that are missing, so the dashboard always has
- * exactly the four widgets regardless of what's in the DB.
- */
-export function normalizeWidgetOrder(raw: unknown): DashboardWidgetKey[] {
-  const arr = Array.isArray(raw) ? (raw as string[]) : [];
-  const seen = new Set<DashboardWidgetKey>();
-  const out: DashboardWidgetKey[] = [];
-  for (const k of arr) {
-    if (VALID_WIDGETS.has(k as DashboardWidgetKey) && !seen.has(k as DashboardWidgetKey)) {
-      seen.add(k as DashboardWidgetKey);
-      out.push(k as DashboardWidgetKey);
-    }
-  }
-  for (const k of DEFAULT_DASHBOARD_WIDGET_ORDER) {
-    if (!seen.has(k)) out.push(k);
-  }
-  return out;
-}
+import { DEFAULT_USER_SETTINGS, type UserSettings } from "@/lib/types";
 
 /** Coerce a raw DB row into a fully-populated UserSettings (defaults fill gaps). */
 function normalize(row: Record<string, unknown> | null): UserSettings {
@@ -51,7 +23,6 @@ function normalize(row: Record<string, unknown> | null): UserSettings {
         ? row.default_currency
         : d.default_currency,
     show_both_currencies: Boolean(row.show_both_currencies),
-    dashboard_widget_order: normalizeWidgetOrder(row.dashboard_widget_order),
   };
 }
 

@@ -11,7 +11,7 @@ export default async function AppearanceSettingsPage() {
     <div>
       <PageHeader
         title="Appearance"
-        description="Personalize the theme, layout, and how your dashboard is arranged."
+        description="Personalize the theme, layout, and formatting preferences."
       />
       <AppearanceClient initial={settings} />
     </div>
