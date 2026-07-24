@@ -163,7 +163,7 @@ export default async function DashboardPage() {
         ))}
       </div>
 
-      <div className="mt-6">
+      <div className="mt-6 w-full max-w-[344px]">
         <DashboardCalendar events={calendarEvents} />
       </div>
     </div>
