@@ -46,10 +46,11 @@ export function ClientBreakdown({
             No income data yet.
           </div>
         ) : (
-          <div className="flex flex-col items-center gap-6 sm:flex-row sm:gap-8">
+          <div className="cbd-cq">
+            <div className="cbd-cq-row flex flex-col items-center gap-6">
             <svg
               viewBox="0 0 140 140"
-              className="h-36 w-36 shrink-0 -rotate-90"
+              className="h-32 w-32 shrink-0 -rotate-90"
               role="img"
               aria-label="Client income breakdown"
             >
@@ -82,26 +83,37 @@ export function ClientBreakdown({
               })}
             </svg>
 
-            <ul className="w-full space-y-2">
+            {/* Full width when stacked; takes the remaining space beside the
+                donut when the container query switches to a row (globals.css
+                .cbd-cq rules). min-w-0 lets long names truncate. */}
+            <ul className="cbd-cq-legend space-y-2.5">
               {items.map((d, i) => {
                 const pct = Math.round((d.value / total) * 100);
                 return (
-                  <li key={d.label} className="flex items-center gap-3 text-sm">
-                    <span
-                      className="h-3 w-3 shrink-0 rounded-full"
-                      style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }}
-                    />
-                    <span className="flex-1 truncate text-foreground">{d.label}</span>
-                    <span className="tabular-nums font-medium text-foreground">
-                      {pct}%
-                    </span>
-                    <span className="w-24 text-right tabular-nums text-muted-foreground">
+                  <li key={d.label} className="text-sm">
+                    {/* Row 1: dot + name + percentage. */}
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="h-3 w-3 shrink-0 rounded-full"
+                        style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }}
+                      />
+                      <span className="min-w-0 flex-1 truncate text-foreground">
+                        {d.label}
+                      </span>
+                      <span className="shrink-0 tabular-nums font-medium text-foreground">
+                        {pct}%
+                      </span>
+                    </div>
+                    {/* Row 2: amount as muted subtext, indented under the name
+                        (dot w-3 = 12px + gap-2 = 8px → pl-5 = 20px). */}
+                    <span className="block truncate pl-5 text-xs tabular-nums text-muted-foreground">
                       {formatCurrency(d.value, currency)}
                     </span>
                   </li>
                 );
               })}
             </ul>
+            </div>
           </div>
         )}
       </CardContent>

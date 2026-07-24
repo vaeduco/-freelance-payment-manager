@@ -189,3 +189,26 @@ html[data-density="compact"] .gap-6 {
 html[data-density="compact"] .gap-4 {
   gap: 0.625rem;
 }
+
+/* Client breakdown widget: donut + legend stack vertically when the card is
+   narrow (e.g. the dashboard's 40% column) and sit side by side only when the
+   card is wide enough for the legend to stay readable. A container query keeps
+   this tied to the card's own width — not the viewport — so the amount never
+   gets truncated or overflows wherever the card is placed. */
+.cbd-cq {
+  container-type: inline-size;
+}
+.cbd-cq-legend {
+  width: 100%;
+  min-width: 0;
+}
+@container (min-width: 19rem) {
+  .cbd-cq-row {
+    flex-direction: row;
+    align-items: center;
+  }
+  .cbd-cq-legend {
+    width: auto;
+    flex: 1 1 0%;
+  }
+}
