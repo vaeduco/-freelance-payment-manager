@@ -20,6 +20,8 @@ import { getClients, getClientsWithStats } from "@/lib/data/clients";
 import { getInvoicesWithClients } from "@/lib/data/invoices";
 import { getPaymentMethods } from "@/lib/data/payment-methods";
 import { getUserSettings } from "@/lib/data/user-settings";
+import { getCalendarEvents } from "@/lib/data/calendar";
+import { DashboardCalendar } from "@/components/dashboard/dashboard-calendar";
 import { formatCurrency, hourlyRatesByProjectType } from "@/lib/utils";
 import type { DashboardWidgetKey } from "@/lib/types";
 
@@ -35,6 +37,7 @@ export default async function DashboardPage() {
     paymentMethods,
     needsAttention,
     settings,
+    calendarEvents,
   ] = await Promise.all([
     getDashboardData(),
     getProfile(),
@@ -44,6 +47,7 @@ export default async function DashboardPage() {
     getPaymentMethods(),
     getNeedsAttention(),
     getUserSettings(),
+    getCalendarEvents(),
   ]);
 
   const currency = profile?.currency ?? "USD";
@@ -157,6 +161,10 @@ export default async function DashboardPage() {
         {settings.dashboard_widget_order.map((key) => (
           <Fragment key={key}>{widgets[key]}</Fragment>
         ))}
+      </div>
+
+      <div className="mt-6">
+        <DashboardCalendar events={calendarEvents} />
       </div>
     </div>
   );

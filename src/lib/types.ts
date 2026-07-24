@@ -75,6 +75,8 @@ export interface Invoice {
   hourly_rate: number | null;
   payment_method_id: string | null;
   paid_at: string | null;
+  /** Scheduled/auto-send placeholder; null = not scheduled (0015). */
+  scheduled_send_at: string | null;
   created_at: string;
   updated_at: string;
 }

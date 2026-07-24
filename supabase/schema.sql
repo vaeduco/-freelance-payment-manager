@@ -67,9 +67,12 @@ create table if not exists public.invoices (
   tracked_hours numeric(10, 2) check (tracked_hours is null or tracked_hours >= 0),
   hourly_rate numeric(12, 2) check (hourly_rate is null or hourly_rate >= 0),
   paid_at timestamptz,
+  scheduled_send_at timestamptz,        -- scheduled/auto-send placeholder (0015)
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+create index if not exists idx_invoices_scheduled on public.invoices (user_id, scheduled_send_at)
+  where scheduled_send_at is not null;
 
 create table if not exists public.payments (
   id uuid primary key default gen_random_uuid(),
