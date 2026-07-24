@@ -1,4 +1,3 @@
-import { Fragment } from "react";
 import { AlertTriangle, Clock, TrendingUp, Wallet } from "lucide-react";
 import {
   Card,
@@ -19,7 +18,6 @@ import { getProfile } from "@/lib/data/profile";
 import { getClients, getClientsWithStats } from "@/lib/data/clients";
 import { getInvoicesWithClients } from "@/lib/data/invoices";
 import { getPaymentMethods } from "@/lib/data/payment-methods";
-import { getUserSettings } from "@/lib/data/user-settings";
 import { getCalendarEvents } from "@/lib/data/calendar";
 import { DashboardCalendar } from "@/components/dashboard/dashboard-calendar";
 import { formatCurrency, hourlyRatesByProjectType } from "@/lib/utils";
@@ -36,7 +34,6 @@ export default async function DashboardPage() {
     invoices,
     paymentMethods,
     needsAttention,
-    settings,
     calendarEvents,
   ] = await Promise.all([
     getDashboardData(),
@@ -46,7 +43,6 @@ export default async function DashboardPage() {
     getInvoicesWithClients(),
     getPaymentMethods(),
     getNeedsAttention(),
-    getUserSettings(),
     getCalendarEvents(),
   ]);
 
@@ -72,8 +68,7 @@ export default async function DashboardPage() {
     value: c.total_paid,
   }));
 
-  // Reorderable widgets, keyed so the dashboard can render them in the order
-  // the user set on /settings/appearance.
+  // Dashboard cards, keyed so the fixed layout below can place each one.
   const widgets: Record<DashboardWidgetKey, React.ReactNode> = {
     income: (
       <Card>
@@ -115,10 +110,6 @@ export default async function DashboardPage() {
     client_breakdown: <ClientBreakdown data={clientSlices} currency={currency} />,
   };
 
-  // Income + Calendar are pinned in the left column; the remaining widgets fill
-  // the right column in the user's saved order (Settings → Appearance).
-  const rightOrder = settings.dashboard_widget_order.filter((k) => k !== "income");
-
   return (
     <div>
       <PageHeader title="Dashboard" description={`Welcome back, ${firstName}`}>
@@ -130,7 +121,8 @@ export default async function DashboardPage() {
         />
       </PageHeader>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {/* Top row — four equal statistic cards. */}
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           label="Income this month"
           value={formatCurrency(stats.incomeThisMonth, currency)}
@@ -161,17 +153,21 @@ export default async function DashboardPage() {
         />
       </div>
 
-      <div className="mt-6 grid items-start gap-6 lg:grid-cols-2">
-        {/* Left column: Income chart with the Calendar directly beneath it. */}
-        <div className="space-y-6">
+      {/*
+        Main content — fixed two-column layout on lg+ (40% / 60% via a 5-col
+        grid), collapsing to a single stacked column below lg.
+      */}
+      <div className="mt-6 grid items-start gap-6 lg:grid-cols-5">
+        {/* Left column (40%): Client breakdown, Income, Calendar. */}
+        <div className="space-y-6 lg:col-span-2">
+          {widgets.client_breakdown}
           {widgets.income}
           <DashboardCalendar events={calendarEvents} />
         </div>
-        {/* Right column: the remaining widgets, in the user's saved order. */}
-        <div className="space-y-6">
-          {rightOrder.map((key) => (
-            <Fragment key={key}>{widgets[key]}</Fragment>
-          ))}
+        {/* Right column (60%): Needs attention, then Recent payments. */}
+        <div className="space-y-6 lg:col-span-3">
+          {widgets.needs_attention}
+          {widgets.recent_payments}
         </div>
       </div>
     </div>
