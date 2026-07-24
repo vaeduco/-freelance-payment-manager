@@ -3,6 +3,7 @@ import type { SecurityEvent, SecurityEventCategory } from "@/lib/types";
 
 export async function getSecurityEvents(opts?: {
   category?: SecurityEventCategory;
+  categories?: SecurityEventCategory[];
   alertsOnly?: boolean;
   limit?: number;
 }): Promise<SecurityEvent[]> {
@@ -13,6 +14,7 @@ export async function getSecurityEvents(opts?: {
     .order("created_at", { ascending: false })
     .limit(opts?.limit ?? 100);
   if (opts?.category) q = q.eq("category", opts.category);
+  if (opts?.categories) q = q.in("category", opts.categories);
   if (opts?.alertsOnly) q = q.eq("is_alert", true);
   const { data } = await q;
   return (data ?? []) as SecurityEvent[];

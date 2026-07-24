@@ -8,6 +8,7 @@ import {
   getSecurityEvents,
   getUnreadAlertCount,
 } from "@/lib/data/security-events";
+import { AUDIT_CATEGORIES } from "@/lib/types";
 import { SecurityClient } from "@/components/security/security-client";
 
 export const metadata: Metadata = { title: "Security" };
@@ -21,7 +22,7 @@ export default async function SecurityPage() {
     getProfile(),
     getSecurityEvents({ alertsOnly: true, limit: 50 }),
     getSecurityEvents({ category: "auth", limit: 50 }),
-    getSecurityEvents({ limit: 100 }),
+    getSecurityEvents({ categories: AUDIT_CATEGORIES, limit: 100 }),
     getUnreadAlertCount(),
   ]);
 

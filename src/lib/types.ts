@@ -126,6 +126,20 @@ export type SecurityEventCategory =
   | "security"
   | "share";
 
+/**
+ * Categories shown in the Audit log — data/record actions only (exports,
+ * creates, updates, deletes). Security activity ("auth" logins, "security"
+ * password/2FA changes) belongs in the Alerts / Login history tabs, not here.
+ */
+export const AUDIT_CATEGORIES: SecurityEventCategory[] = [
+  "invoice",
+  "client",
+  "payment",
+  "payment_method",
+  "report",
+  "share",
+];
+
 /** A public share link for one invoice (password_hash never leaves the server). */
 export interface SharedLink {
   id: string;
